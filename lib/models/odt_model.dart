@@ -69,9 +69,12 @@ class OdtSummary {
   });
   
   factory OdtSummary.fromJson(Map<String, dynamic> json) {
-    final fam = json['por_familia'] as Map<String, dynamic>? ?? {};
+    final dynamic porFamiliaRaw = json['por_familia'];
     final Map<String, int> familyMap = {};
-    fam.forEach((k, v) => familyMap[k] = int.parse(v.toString()));
+    
+    if (porFamiliaRaw is Map) {
+      porFamiliaRaw.forEach((k, v) => familyMap[k.toString()] = int.parse(v.toString()));
+    }
 
     return OdtSummary(
       total: int.parse(json['total_servicios']?.toString() ?? '0'),
