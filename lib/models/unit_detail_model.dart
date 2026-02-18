@@ -1,5 +1,5 @@
 class ResponseUnitModel{
-  final String status;
+  // final String status;
 }
 
 class UnitDetailModel {
