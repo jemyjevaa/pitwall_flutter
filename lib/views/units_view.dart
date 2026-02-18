@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../view_models/units_view_model.dart';
 import '../models/unit_model.dart';
+import '../models/history_model.dart';
 import '../services/UserSession.dart';
 import 'odt_view.dart';
 import 'login_view.dart';
@@ -106,16 +107,71 @@ class _UnitsViewState extends State<UnitsView> {
             return const Center(child: Text("No hay unidades disponibles"));
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: viewModel.units.length,
-            itemBuilder: (context, index) {
-              final unit = viewModel.units[index];
-              return UnitCard(unit: unit);
-            },
+          return Column(
+            children: [
+              if (user != null) _buildPaginationControls(viewModel, user),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  itemCount: viewModel.units.length,
+                  itemBuilder: (context, index) {
+                    final unit = viewModel.units[index];
+                    return UnitCard(unit: unit);
+                  },
+                ),
+              ),
+              if (user != null) _buildPaginationControls(viewModel, user),
+            ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildPaginationControls(UnitsViewModel viewModel, user) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _paginationButton(
+            icon: Icons.first_page_rounded,
+            onPressed: viewModel.page > 1 ? () => viewModel.goToFirstPage(user) : null,
+          ),
+          _paginationButton(
+            icon: Icons.chevron_left_rounded,
+            onPressed: viewModel.page > 1 ? () => viewModel.previousPage(user) : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "Página ${viewModel.page} de ${viewModel.totalPages}",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A237E)),
+            ),
+          ),
+          _paginationButton(
+            icon: Icons.chevron_right_rounded,
+            onPressed: viewModel.page < viewModel.totalPages ? () => viewModel.nextPage(user) : null,
+          ),
+          _paginationButton(
+            icon: Icons.last_page_rounded,
+            onPressed: (viewModel.page < viewModel.totalPages && viewModel.totalPages > 0) 
+                ? () => viewModel.goToLastPage(user) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paginationButton({required IconData icon, VoidCallback? onPressed}) {
+    return IconButton(
+      icon: Icon(icon),
+      onPressed: onPressed,
+      color: const Color(0xFF1A237E),
+      disabledColor: Colors.grey[300],
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
     );
   }
 
@@ -264,7 +320,7 @@ class UnitCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24.0),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF1A237E).withOpacity(0.08),
+              color: const Color(0xFF1A237E).withOpacity(0.08),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -325,7 +381,7 @@ class UnitCard extends StatelessWidget {
                                   margin: const EdgeInsets.only(top: 8),
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Color(0xFF2196F3).withOpacity(0.08),
+                                    color: const Color(0xFF2196F3).withOpacity(0.08),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
@@ -404,7 +460,14 @@ class UnitCard extends StatelessWidget {
     );
   }
 
-
+  void _showCreateCitaModal(BuildContext context, UnitModel unit) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CreateCitaModal(unit: unit),
+    );
+  }
 
   Widget _buildDetailGrid(UnitModel unit) {
     return LayoutBuilder(
@@ -520,11 +583,6 @@ class UnitCard extends StatelessWidget {
 
     final viewModel = Provider.of<UnitsViewModel>(context, listen: false);
     
-    // id_pre_odt: Usually found in unit data if it's a Taller view of units with reports
-    // For now, using a placeholder or checking if unit model has it (unlikely without update)
-    // Actually, user said: POST /api/appPitwall/citas/ { "Id_pre_odt": 1238, ... }
-    // If unit doesn't have id_pre_odt, this won't work.
-    
     final success = await viewModel.updateCitaStatus(user, 0, status); // 0 is placeholder
     
     if (context.mounted) {
@@ -535,15 +593,6 @@ class UnitCard extends StatelessWidget {
         ),
       );
     }
-  }
-
-  void _showCreateCitaModal(BuildContext context, UnitModel unit) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CreateCitaModal(unit: unit),
-    );
   }
 
   Color _parseColor(String hexString) {
@@ -615,9 +664,22 @@ class UnitCard extends StatelessWidget {
   }
 }
 
-class _UnitHistoryModal extends StatelessWidget {
+class _UnitHistoryModal extends StatefulWidget {
   final UnitModel unit;
   const _UnitHistoryModal({required this.unit});
+
+  @override
+  State<_UnitHistoryModal> createState() => _UnitHistoryModalState();
+}
+
+class _UnitHistoryModalState extends State<_UnitHistoryModal> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UnitsViewModel>(context, listen: false).fetchHistory(widget.unit.id);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -629,19 +691,227 @@ class _UnitHistoryModal extends StatelessWidget {
         return Container(
           decoration: const BoxDecoration(
             color: Color(0xFFF5F5F7),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
-          child: ListView(
-            controller: controller,
-            padding: const EdgeInsets.all(16),
+          child: Column(
             children: [
-              const Center(child: Text("Historial de la Unidad", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-              const SizedBox(height: 20),
-              const Center(child: Text("Próximamente...", style: TextStyle(color: Colors.grey))),
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A237E).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.history_rounded, color: Color(0xFF1A237E)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Historial de Arreglos",
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1A237E)),
+                          ),
+                          Text(
+                            "Unidad ${widget.unit.name}",
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Consumer<UnitsViewModel>(
+                  builder: (context, viewModel, child) {
+                    if (viewModel.isLoadingHistory) {
+                      return const Center(child: CircularProgressIndicator(color: Color(0xFF1A237E)));
+                    }
+
+                    if (viewModel.unitHistory.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.grey[300]),
+                            const SizedBox(height: 16),
+                            Text("No hay historial disponible", style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      );
+                    }
+                    
+                    return ListView.builder(
+                      controller: controller,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      itemCount: viewModel.unitHistory.length,
+                      itemBuilder: (context, index) {
+                        final history = viewModel.unitHistory[index];
+                        return _buildHistoryItem(history, index == viewModel.unitHistory.length - 1);
+                      },
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildHistoryItem(HistoryModel history, bool isLast) {
+    Color statusColor;
+    IconData statusIcon;
+    
+    switch (history.status.toLowerCase()) {
+      case 'cancelada':
+        statusColor = Colors.red[400]!;
+        statusIcon = Icons.cancel_rounded;
+        break;
+      case 'terminada':
+      case 'completada':
+        statusColor = Colors.green[400]!;
+        statusIcon = Icons.check_circle_rounded;
+        break;
+      case 'en proceso':
+        statusColor = Colors.blue[400]!;
+        statusIcon = Icons.sync_rounded;
+        break;
+      default:
+        statusColor = Colors.orange[400]!;
+        statusIcon = Icons.pending_actions_rounded;
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline logic
+          Column(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: statusColor, width: 2),
+                ),
+                child: Icon(statusIcon, size: 18, color: statusColor),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: Colors.grey[300],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          // Content
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(color: Colors.grey[100]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          history.status.toUpperCase(),
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: statusColor, letterSpacing: 0.5),
+                        ),
+                      ),
+                      Text(
+                        history.fechaCreacion,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[400]),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (history.folioOdt.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        "FOLIO: ${history.folioOdt}",
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1A237E)),
+                      ),
+                    ),
+                  Text(
+                    "ACTIVIDADES:",
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey[500], letterSpacing: 1),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    history.actividades,
+                    style: const TextStyle(fontSize: 13, height: 1.5, fontWeight: FontWeight.w500, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(color: Colors.grey[50]),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 10,
+                        backgroundColor: Colors.grey[200],
+                        child: Text(
+                          history.userCreated.isNotEmpty ? history.userCreated[0].toUpperCase() : "?",
+                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Solicitado por: ",
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
+                      Text(
+                        history.userCreated,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -794,5 +1064,3 @@ class _CreateCitaModalState extends State<_CreateCitaModal> {
     );
   }
 }
-
-

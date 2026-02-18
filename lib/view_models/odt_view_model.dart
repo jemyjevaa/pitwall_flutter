@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/odt_model.dart';
+import '../services/RequestServ.dart';
 
 class OdtViewModel extends ChangeNotifier {
   // State 1: Folios List (for search/selection)
@@ -69,7 +70,7 @@ class OdtViewModel extends ChangeNotifier {
          _filteredFolios = List.from(_allFolios);
        }
     } catch (e) {
-      if (kDebugMode) print("Error fetching folios: $e");
+      if (RequestServ.modeDebug) print("Error fetching folios: $e");
       _errorMessage = "Error de conexión";
     } finally {
       // Don't stop loading yet if we are going to auto-select, but for safety:
@@ -124,7 +125,7 @@ class OdtViewModel extends ChangeNotifier {
         _errorMessage = "Error al cargar detalle ODT";
       }
     } catch (e) {
-       if (kDebugMode) print("Error loading ODT $folio: $e");
+       if (RequestServ.modeDebug) print("Error loading ODT $folio: $e");
        _errorMessage = "Error al cargar detalle";
     } finally {
       _isLoading = false;
