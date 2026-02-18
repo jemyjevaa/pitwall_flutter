@@ -10,7 +10,20 @@ class UserSession extends ChangeNotifier {
   UserModel? get user => _user;
   bool get isLoggedIn => _user != null;
 
-  void setUser(UserModel user, {bool persist = false}) {
+  Future<void> loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionData = prefs.getString(_sessionKey);
+    if (sessionData != null) {
+      try {
+        _user = UserModel.fromJson(jsonDecode(sessionData));
+        notifyListeners();
+      } catch (e) {
+        await prefs.remove(_sessionKey);
+      }
+    }
+  }
+
+  void setUser(UserModel user, {bool persist = true}) {
     _user = user;
     if (persist) {
       _saveSession(user);
@@ -44,28 +57,10 @@ class UserSession extends ChangeNotifier {
     await prefs.setString(_sessionKey, jsonEncode(user.toJson()));
   }
 
-  Future<void> loadSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final sessionData = prefs.getString(_sessionKey);
-    if (sessionData != null) {
-      try {
-        _user = UserModel.fromJson(jsonDecode(sessionData));
-        notifyListeners();
-      } catch (e) {
-        debugPrint("Error loading session: $e");
-        await clearSession();
-      }
-    }
-  }
-
-  Future<void> clearSession() async {
+  Future<void> logout() async {
+    _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessionKey);
-    _user = null;
     notifyListeners();
-  }
-
-  void logout() {
-    clearSession();
   }
 }

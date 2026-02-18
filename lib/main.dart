@@ -5,17 +5,14 @@ import 'views/units_view.dart';
 import 'views/operator_data_view.dart';
 import 'view_models/login_view_model.dart';
 import 'view_models/units_view_model.dart';
-import 'services/user_session_service.dart';
+import 'services/UserSession.dart';
+import 'services/RequestServ.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final userSession = UserSession();
-  await userSession.loadSession();
-  
+void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: userSession),
+        ChangeNotifierProvider(create: (_) => UserSession()),
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
         ChangeNotifierProvider(create: (_) => UnitsViewModel()),
       ],

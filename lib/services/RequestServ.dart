@@ -5,6 +5,7 @@ class RequestServ {
   static const String baseUrl = 'https://nuevosistema.busmen.net';
   static const bool modeDebug = true;
 
+
   static Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
     final url = Uri.parse('$baseUrl$endpoint');
     return await http.post(
@@ -19,7 +20,9 @@ class RequestServ {
       queryParameters: queryParams?.map((key, value) => MapEntry(key, value.toString())) ?? {},
     );
 
-    print("FINAL URL: $uri");
+    if(modeDebug){
+      print("FINAL URL: $uri");
+    }
 
     return await http.get(uri, headers: {
       "Content-Type": "application/json",

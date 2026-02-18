@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/request_service.dart';
-import '../services/response_service.dart';
-import '../services/user_session_service.dart';
+import '../services/RequestServ.dart';
+import '../services/ResponseServ.dart';
+import '../services/UserSession.dart';
 import '../models/user_model.dart';
 import 'package:provider/provider.dart';
 
