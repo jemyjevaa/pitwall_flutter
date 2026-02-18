@@ -8,8 +8,8 @@ class RequestServ {
   static const String baseUrlNor = "https://nuevosistema.busmen.net/api/appPitwall/";
 
   static const String urlSupervisor = "supervisor";
-  static const String urlAdmin = "operador";
-  static const String urlOperator = "admin";
+  static const String urlAdmin = "admin";
+  static const String urlOperator = "operador";
   static const String urlWorkStation = "taller";
 
   RequestServ._privateConstructor();
@@ -34,12 +34,18 @@ class RequestServ {
       }
 
       if (method.toUpperCase() == 'GET') {
-        // Si es GET, arma la URL con o sin parámetros
-        Uri uri;
+        // Si es GET, arma la URL con parámetros en el query string
+        Uri uri = Uri.parse(fullUrl);
         if (params != null && params.isNotEmpty) {
-          uri = Uri.parse(fullUrl).replace(queryParameters: params);
-        } else {
-          uri = Uri.parse(fullUrl);
+          // Convertimos los valores a String, ya que Uri.replace requiere Map<String, dynamic> 
+          // donde los valores sean String o Iterable<String>
+          final queryParams = params.map((key, value) => MapEntry(key, value.toString()));
+          
+          // Mezclamos con parámetros existentes si la URL ya traía alguno
+          uri = uri.replace(queryParameters: {
+            ...uri.queryParameters,
+            ...queryParams,
+          });
         }
         response = await http.get(uri).timeout(const Duration(seconds: 10));
       } else {
@@ -85,7 +91,6 @@ class RequestServ {
         return response.body;
       } else {
         // print("HTTP error: ${response.statusCode}");
-        // print("response => ${response.headers}");
         return null;
       }
     } catch (e) {

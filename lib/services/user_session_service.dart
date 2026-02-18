@@ -19,7 +19,7 @@ class UserSession {
 
   // region persist data user
 
-  String  get rolUser => _prefs?.getString('rolUser') ?? "";
+  String  get rolUser => _prefs?.getString('rolUser') ?? "admin";
   set rolUser(String value) => _prefs?.setString('rolUser', value);
 
 

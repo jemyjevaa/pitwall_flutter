@@ -26,17 +26,27 @@ class UnitsViewModel extends ChangeNotifier {
 
     RequestServ serv = RequestServ.instance;
 
-    String result = switch (UserSession().rolUser) {
-      "operador" => RequestServ.urlOperator,
+    if( RequestServ.modeDebug ){
+      print(" rolUser => ${UserSession().rolUser}");
+    }
+
+    String role = UserSession().rolUser.trim().toLowerCase();
+    String result = switch (role) {
+      "operator"   => RequestServ.urlOperator,
       "supervisor" => RequestServ.urlSupervisor,
-      "taller" => RequestServ.urlWorkStation,
-      _ => RequestServ.urlAdmin
+      "taller"     => RequestServ.urlWorkStation,
+      "admin"      => RequestServ.urlAdmin,
+      _            => "null"
     };
 
     try {
 
       final unitRequest = await serv.handlingRequestParsed(
           urlParam: result,
+          params: {
+            "idSupervisor": 155,
+            "accion": "getUnidades"
+          },
           method: "GET",
           asJson: true,
           fromJson: (json) => json
@@ -132,10 +142,10 @@ class UnitsViewModel extends ChangeNotifier {
         }),
       );
 
-      if (kDebugMode) {
-        print("API Response Code: ${response.statusCode}");
-        print("API Response Body: ${response.body}");
-      }
+      // if (kDebugMode) {
+      //   print("API Response Code: ${response.statusCode}");
+      //   print("API Response Body: ${response.body}");
+      // }
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
