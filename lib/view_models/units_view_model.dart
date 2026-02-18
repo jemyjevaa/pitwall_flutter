@@ -1,10 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+<<<<<<< HEAD
 import 'package:pitbus_app/services/RequestServ.dart';
 import 'package:pitbus_app/services/UserSession.dart';
 import '../services/ResponseServ.dart';
+=======
+import 'package:pitbus_app/services/request_service.dart';
+import 'package:pitbus_app/services/user_session_service.dart';
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
 import '../models/unit_model.dart';
 import '../models/user_model.dart';
+import '../services/RequestServ.dart';
+import '../services/ResponseServ.dart';
 
 class UnitsViewModel extends ChangeNotifier {
   List<UnitModel> _units = [];
@@ -43,13 +50,32 @@ class UnitsViewModel extends ChangeNotifier {
           params = {"idSupervisor": user.id};
           break;
         case 'OPERADOR':
-          // Using manual data filled by the user in OperatorDataView
+          // 1. Get ALL units first from admin to find the assignment
+          final adminResponse = await RequestServ.get('/api/appPitwall/admin/', {"accion": "getUnidades"});
+          final adminData = ResponseServ.handleResponse(adminResponse);
+          
+          List<dynamic> allUnitsJson = [];
+          if (adminData is List) {
+            allUnitsJson = adminData;
+          } else if (adminData is Map) {
+            allUnitsJson = adminData['units'] ?? adminData['data'] ?? [];
+          }
+
+          final allUnits = allUnitsJson.map((json) => UnitModel.fromJson(json)).toList();
+          
+          // 2. Find the unit where operadorId matches user.id
+          final myUnit = allUnits.firstWhere(
+            (u) => u.operadorId == user.id.toString(),
+            orElse: () => throw Exception('No se encontró una unidad asignada para este operador.'),
+          );
+
+          // 3. Now get the SPECIFIC details for that unit
           endpoint = '/api/appPitwall/operador/';
           params = {
-            "operadorName": user.nombre.toLowerCase(),
-            "operadorLastName1": user.apPaterno.toLowerCase(),
-            "operadorLastName2": user.apMaterno.toLowerCase(),
-            "unidad": user.assignedUnit ?? "B1019" // Fallback to provided B1019 if somehow missing
+            "operadorName": user.nombre,
+            "operadorLastName1": user.apPaterno,
+            "operadorLastName2": user.apMaterno,
+            "unidad": myUnit.name
           };
           break;
         case 'TALLER':
@@ -96,21 +122,16 @@ class UnitsViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> createCita(UserModel user, String unidadNombre, String reporteFalla, List<String> failureTypes, String fechaPedida) async {
+  Future<bool> createCita(UserModel user, String unidadNombre, String reporteFalla, String fechaPedida) async {
     _isLoading = true;
     notifyListeners();
     try {
-      // Combine failure types with description
-      final String combinedReport = failureTypes.isNotEmpty 
-          ? "Tipos de falla: ${failureTypes.join(', ')}. \nDescripción: $reporteFalla"
-          : reporteFalla;
-
       final body = {
+        "usuarioName": user.fullName,
+        "usuarioId": user.id,
         "action": "create",
         "unidad": unidadNombre,
-        "usuarioId": user.id,
-        "usuarioName": user.fullName,
-        "reporteFalla": combinedReport,
+        "reporteFalla": reporteFalla,
         "fechaPedida": fechaPedida,
         "sucursal": user.sucursal
       };
@@ -125,22 +146,6 @@ class UnitsViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
-    }
-  }
-
-  // Placeholder for history fetch - will need endpoint confirmation
-  Future<List<dynamic>> fetchUnitHistory(String unitName) async {
-    try {
-      // Assuming a similar pattern for history
-      final response = await RequestServ.get('/api/appPitwall/citas/', {
-        "action": "history",
-        "unidad": unitName
-      });
-      final data = ResponseServ.handleResponse(response);
-      return data is List ? data : [];
-    } catch (e) {
-      if (kDebugMode) print("Error fetching history: $e");
-      return [];
     }
   }
 
