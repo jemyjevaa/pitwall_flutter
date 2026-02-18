@@ -1,32 +1,71 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/user_model.dart';
 
-class UserSession {
-  static final UserSession _instance = UserSession._internal();
-  SharedPreferences? _prefs;
+class UserSession extends ChangeNotifier {
+  UserModel? _user;
+  static const String _sessionKey = 'user_session';
 
-  factory UserSession() {
-    return _instance;
+  UserModel? get user => _user;
+  bool get isLoggedIn => _user != null;
+
+  void setUser(UserModel user, {bool persist = false}) {
+    _user = user;
+    if (persist) {
+      _saveSession(user);
+    }
+    notifyListeners();
   }
 
-  UserSession._internal();
-
-  Future<void> init() async {
-    _prefs ??= await SharedPreferences.getInstance();
+  void updateUserDetails({
+    String? nombre,
+    String? apPaterno,
+    String? apMaterno,
+    String? assignedUnit,
+    bool persist = true,
+  }) {
+    if (_user != null) {
+      _user = _user!.copyWith(
+        nombre: nombre,
+        apPaterno: apPaterno,
+        apMaterno: apMaterno,
+        assignedUnit: assignedUnit,
+      );
+      if (persist) {
+        _saveSession(_user!);
+      }
+      notifyListeners();
+    }
   }
 
-  bool get isLogin => _prefs?.getBool('isLogin') ?? false;
-  set isLogin(bool value) => _prefs?.setBool('isLogin', value);
+  Future<void> _saveSession(UserModel user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionKey, jsonEncode(user.toJson()));
+  }
 
-  // region persist data user
+  Future<void> loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionData = prefs.getString(_sessionKey);
+    if (sessionData != null) {
+      try {
+        _user = UserModel.fromJson(jsonDecode(sessionData));
+        notifyListeners();
+      } catch (e) {
+        debugPrint("Error loading session: $e");
+        await clearSession();
+      }
+    }
+  }
 
-  String  get rolUser => _prefs?.getString('rolUser') ?? "admin";
-  set rolUser(String value) => _prefs?.setString('rolUser', value);
+  Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_sessionKey);
+    _user = null;
+    notifyListeners();
+  }
 
-
-
-  // Limpiar datos
-  Future<void> clear() async {
-    isLogin = false;
-    rolUser = "";
+  void logout() {
+    clearSession();
   }
 }
