@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pitbus_app/services/request_service.dart';
 import 'package:provider/provider.dart';
 import 'views/units_view.dart';
 import 'view_models/units_view_model.dart';
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'PitBus Units',
-        debugShowCheckedModeBanner: false,
+        debugShowCheckedModeBanner: RequestServ.modeDebug,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF2196F3),

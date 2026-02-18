@@ -97,7 +97,7 @@ class OdtViewModel extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        // Parse Services
+        // Parse services
         List<OdtService> newServices = [];
         if (data['data'] != null && data['data']['data'] != null) {
           final List<dynamic> items = data['data']['data'];
@@ -148,7 +148,7 @@ class OdtViewModel extends ChangeNotifier {
     // 2. Filter local services.
     
     // Simplest approach for Request:
-    // Search Bar filters the *Services* (Activity/etc).
+    // Search Bar filters the *services* (Activity/etc).
     // To switch ODT, maybe we need a separate "Change Folio" button or the search bar *is* a Folio Selector?
     // "UNA VES SELECCIONADA UNA ODT EN EL BUSCADOR" -> The Search Bar IS the Folio Selector.
     
@@ -158,9 +158,9 @@ class OdtViewModel extends ChangeNotifier {
     // And `findFolio` for switching.
     
     // Compromise:
-    // `search(query)` filters the *Services* (Activity).
+    // `search(query)` filters the *services* (Activity).
     // To switch ODT, we'll rely on the user using a "picker" or typing a folio that matches exactly?
-    // Let's assume `search` filters the visible content (Services).
+    // Let's assume `search` filters the visible content (services).
     // The "Selection" might have been implied as "Find the folio".
     _applyFilters();
   }

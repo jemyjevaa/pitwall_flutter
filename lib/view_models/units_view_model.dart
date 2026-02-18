@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:pitbus_app/services/request_service.dart';
+import 'package:pitbus_app/services/user_session_service.dart';
 import '../models/unit_model.dart';
 import '../models/operator_model.dart';
 
@@ -21,7 +23,29 @@ class UnitsViewModel extends ChangeNotifier {
   }
 
   Future<void> fetchOperators() async {
+
+    RequestServ serv = RequestServ.instance;
+
+    String result = switch (UserSession().rolUser) {
+      "operador" => RequestServ.urlOperator,
+      "supervisor" => RequestServ.urlSupervisor,
+      "taller" => RequestServ.urlWorkStation,
+      _ => RequestServ.urlAdmin
+    };
+
     try {
+
+      final unitRequest = await serv.handlingRequestParsed(
+          urlParam: result,
+          method: "GET",
+          asJson: true,
+          fromJson: (json) => json
+      );
+
+      if( RequestServ.modeDebug ){
+        print(" unitRequest => $unitRequest");
+      }
+
       final response = await http.post(
         Uri.parse('https://nuevosistema.busmen.net/WS/aplicacionmovil/app_get_operation.php'),
         body: json.encode({"id": 1}), // Using '1' as requested
