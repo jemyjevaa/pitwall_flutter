@@ -9,6 +9,8 @@ class UnitModel {
   final String remainingKm; // "KM RESTANTES"
   final String estimatedNextVisit; // "ESTIMACION PROX. VISITA"
   final String? statusColor; // Hex string from API, e.g., "#C2240E"
+  final String? operadorId;
+  final String? workshopName; // "name_geofence" in JSON
 
   UnitModel({
     required this.id,
@@ -21,6 +23,8 @@ class UnitModel {
     required this.remainingKm,
     required this.estimatedNextVisit,
     this.statusColor,
+    this.operadorId,
+    this.workshopName,
   });
 
   factory UnitModel.fromJson(Map<String, dynamic> json) {
@@ -38,6 +42,8 @@ class UnitModel {
       remainingKm: _formatNumber(maintenance['kmRestantes']),
       estimatedNextVisit: maintenance['proxVisita1']?.toString() ?? 'N/A', // Using proxVisita1
       statusColor: maintenance['color']?.toString(),
+      operadorId: unidad['operadorId']?.toString(),
+      workshopName: json['name_geofence']?.toString(),
     );
   }
 

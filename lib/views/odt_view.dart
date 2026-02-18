@@ -9,15 +9,24 @@ class OdtView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFF8F9FE),
       appBar: AppBar(
         title: const Text(
           'Consulta de ODT',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: 0.5),
         ),
-        backgroundColor: const Color(0xFFF99A25),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xFF1A237E), Color(0xFF283593)],
+            ),
+          ),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+        centerTitle: true,
       ),
       body: ChangeNotifierProvider(
         create: (_) => OdtViewModel(),
@@ -27,12 +36,18 @@ class OdtView extends StatelessWidget {
               children: [
                 // Top Dashboard & Search Section
                 Container(
-                   decoration: const BoxDecoration(
+                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF1A237E).withOpacity(0.05), 
+                        blurRadius: 15, 
+                        offset: const Offset(0, 8)
+                      )
+                    ],
                   ),
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
                       // Search / Select ODT
@@ -49,7 +64,6 @@ class OdtView extends StatelessWidget {
                            viewModel.onFolioSelected(selection);
                         },
                         fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                           // If a folio is selected, show it.
                            if (viewModel.selectedFolio != null && controller.text.isEmpty) {
                               controller.text = viewModel.selectedFolio!;
                            }
@@ -60,40 +74,48 @@ class OdtView extends StatelessWidget {
                               onEditingComplete: onEditingComplete,
                               decoration: InputDecoration(
                                 hintText: "Buscar Folio (ej. GL00186536)...",
-                                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF1A237E)),
                                 filled: true,
-                                fillColor: Colors.grey[100],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
+                                fillColor: Colors.grey[50],
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(color: Colors.grey[200]!),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                                suffixIcon: viewModel.isLoading ? Transform.scale(scale: 0.5, child: const CircularProgressIndicator()) : null,
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(color: Color(0xFF1A237E), width: 1.5),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                suffixIcon: viewModel.isLoading ? Transform.scale(scale: 0.5, child: const CircularProgressIndicator(strokeWidth: 2)) : null,
                               ),
                            );
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       // Dashboard Metrics (Odt Summary)
                       Row(
                         children: [
-                          _buildMetricCard("TOTAL SERVICIOS", viewModel.summary.total.toString(), Colors.blue),
-                          const SizedBox(width: 8),
-                          _buildMetricCard("SIN TERMINAR", viewModel.summary.unfinished.toString(), Colors.orange),
-                          const SizedBox(width: 8),
-                          _buildMetricCard("TERMINADOS", viewModel.summary.finished.toString(), Colors.green),
+                          _buildMetricCard("TOTAL", viewModel.summary.total.toString(), const Color(0xFF1A237E)),
+                          const SizedBox(width: 12),
+                          _buildMetricCard("PENDIENTES", viewModel.summary.unfinished.toString(), Colors.orange[800]!),
+                          const SizedBox(width: 12),
+                          _buildMetricCard("LISTOS", viewModel.summary.finished.toString(), Colors.green[700]!),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                       // Family Filters
-                      Row(
-                        children: [
-                          _buildFilterChip("TODOS", viewModel),
-                          const SizedBox(width: 8),
-                          _buildFilterChip("GASOLINA", viewModel),
-                          const SizedBox(width: 8),
-                          _buildFilterChip("SERVICIOS", viewModel),
-                        ],
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildFilterChip("TODOS", viewModel),
+                            const SizedBox(width: 10),
+                            _buildFilterChip("GASOLINA", viewModel),
+                            const SizedBox(width: 10),
+                            _buildFilterChip("SERVICIOS", viewModel),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -129,17 +151,24 @@ class OdtView extends StatelessWidget {
   Widget _buildMetricCard(String label, String value, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          color: color.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
         ),
         child: Column(
           children: [
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color), textAlign: TextAlign.center),
-            const SizedBox(height: 4),
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+            Text(
+              label, 
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.5), 
+              textAlign: TextAlign.center
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value, 
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color)
+            ),
           ],
         ),
       ),
@@ -148,23 +177,25 @@ class OdtView extends StatelessWidget {
 
   Widget _buildFilterChip(String label, OdtViewModel viewModel) {
     final isSelected = viewModel.selectedFamily == label;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => viewModel.filterByFamily(label),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF99A25) : Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
+      onTap: () => viewModel.filterByFamily(label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1A237E) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF1A237E) : Colors.grey[300]!,
+            width: 1.5,
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.grey[600],
-            ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.grey[600],
           ),
         ),
       ),
@@ -178,17 +209,17 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const brandColor = Color(0xFFF99A25);
+    const primaryColor = Color(0xFF1A237E);
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: primaryColor.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -196,101 +227,134 @@ class ServiceCard extends StatelessWidget {
         children: [
           // Top Section: Photo + Activity
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: NetworkImage(service.mechanicPhoto), 
-                  backgroundColor: Colors.grey[300],
-                  onBackgroundImageError: (_, __) {},
-                  child: service.mechanicPhoto.isEmpty ? const Icon(Icons.person, color: Colors.grey) : null,
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: primaryColor.withOpacity(0.2), width: 1.5),
+                  ),
+                  child: CircleAvatar(
+                    radius: 26,
+                    backgroundImage: NetworkImage(service.mechanicPhoto), 
+                    backgroundColor: Colors.grey[100],
+                    onBackgroundImageError: (_, __) {},
+                    child: service.mechanicPhoto.isEmpty 
+                        ? const Icon(Icons.person_rounded, color: Colors.grey) 
+                        : null,
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(service.activity, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 2),
-                      Text(service.maintenanceCode, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                      Text(
+                        service.activity, 
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF1A237E))
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.tag_rounded, size: 12, color: Colors.grey[400]),
+                          const SizedBox(width: 4),
+                          Text(
+                            service.maintenanceCode, 
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w600)
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
                  Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: brandColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: brandColor),
+                    color: Color(0xFF2196F3).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     service.folio,
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: brandColor, fontSize: 12),
+                    style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF2196F3), fontSize: 11),
                   ),
                 ),
               ],
             ),
           ),
-          Divider(height: 1, color: Colors.grey[200]),
+          Divider(height: 1, color: Colors.grey[100]),
           // Middle Section: Details List (Stacked)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             child: Column(
               children: [
                 _buildInfoRow("FAMILIA", service.family),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 _buildInfoRow("TIEMPO", service.time),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 _buildInfoRow("MECÁNICO", service.mainMechanicName),
               ],
             ),
           ),
-           Divider(height: 1, color: Colors.grey[200]),
-           // Bottom: Parts & Status
-           Padding(
-             padding: const EdgeInsets.all(12),
-             child: Column(
-               crossAxisAlignment: CrossAxisAlignment.start,
-               children: [
-                 if (service.parts.isNotEmpty) ...[
-                   const Text("REFACCIONES:", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                   const SizedBox(height: 6),
-                   Wrap(
-                     spacing: 6,
-                     runSpacing: 6,
-                     children: service.parts.map((p) => Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                       decoration: BoxDecoration(
-                         color: Colors.grey[100],
-                         borderRadius: BorderRadius.circular(6),
-                         border: Border.all(color: Colors.grey[300]!)
-                       ),
-                       child: Text(p, style: const TextStyle(fontSize: 11)),
-                     )).toList(),
-                   ),
-                   const SizedBox(height: 12),
-                 ],
-                 Row(
-                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                   children: [
-                     const Text("ESTADO:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                     Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                       decoration: BoxDecoration(
-                         color: service.isFinished ? Colors.green : Colors.orange,
-                         borderRadius: BorderRadius.circular(20),
-                       ),
-                       child: Text(
-                         service.statusLabel.toUpperCase(),
-                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                       ),
-                     ),
-                   ],
-                 )
-               ],
-             ),
-           )
+          Divider(height: 1, color: Colors.grey[100]),
+          // Bottom: Parts & Status
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (service.parts.isNotEmpty) ...[
+                  Text(
+                    "REFACCIONES", 
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey[500], letterSpacing: 1.0)
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: service.parts.map((p) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[200]!)
+                      ),
+                      child: Text(p, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87)),
+                    )).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "ESTADO ACTUAL", 
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black54, letterSpacing: 0.5)
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: service.isFinished ? Colors.green[600] : Colors.orange[800],
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (service.isFinished ? Colors.green : Colors.orange).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Text(
+                        service.statusLabel.toUpperCase(),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.0),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          )
         ],
       ),
     );
@@ -302,10 +366,16 @@ class ServiceCard extends StatelessWidget {
       children: [
         SizedBox(
           width: 90, 
-          child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+          child: Text(
+            label, 
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey[500], letterSpacing: 0.5)
+          ),
         ),
         Expanded(
-          child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+          child: Text(
+            value, 
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black87)
+          ),
         ),
       ],
     );
