@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+<<<<<<< HEAD
+=======
 
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
 import 'RequestServ.dart';
 
 class ResponseServ {
