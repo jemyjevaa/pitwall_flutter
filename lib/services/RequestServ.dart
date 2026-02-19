@@ -8,6 +8,12 @@ class RequestServ {
 
   static Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
     final url = Uri.parse('$baseUrl$endpoint');
+
+    if(modeDebug){
+      print("[ POST ] FINAL URL: $url");
+      print("[ POST ] FINAL PARAM: $body");
+    }
+
     return await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -16,16 +22,16 @@ class RequestServ {
   }
 
   static Future<http.Response> get(String endpoint, Map<String, dynamic>? queryParams) async {
-    final uri = Uri.parse(baseUrl + endpoint).replace(
+    final url = Uri.parse(baseUrl + endpoint).replace(
       queryParameters: queryParams?.map((key, value) => MapEntry(key, value.toString())) ?? {},
     );
 
     if(modeDebug){
-      print("FINAL URL: $uri");
-      print("FINAL PARAM: $queryParams");
+      print("[ GET ] FINAL URL: $url");
+      print("[ GET ] FINAL PARAM: $queryParams");
     }
 
-    return await http.get(uri, headers: {
+    return await http.get(url, headers: {
       "Content-Type": "application/json",
     });
   }
@@ -41,8 +47,8 @@ class RequestServ {
       String fullUrl = urlParam;
 
       http.Response response;
-      print("url => $fullUrl");
-      print("params => $params");
+      print("[ $method ] url => $fullUrl");
+      print("[ $method ] params => $params");
 
       if (method.toUpperCase() == 'GET') {
         // Si es GET, arma la URL con o sin parámetros
