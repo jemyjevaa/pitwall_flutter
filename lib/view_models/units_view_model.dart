@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:pitbus_app/services/RequestServ.dart';
-import 'package:pitbus_app/services/UserSession.dart';
+import '../services/RequestServ.dart';
+import '../services/UserSession.dart';
 import '../services/ResponseServ.dart';
 import '../models/unit_model.dart';
 import '../models/user_model.dart';
@@ -11,8 +11,10 @@ class UnitsViewModel extends ChangeNotifier {
   List<UnitModel> _units = [];
   bool _isLoading = false;
   String? _errorMessage;
+  List<dynamic> _unitHistory = [];
 
   List<UnitModel> get units => _units;
+  List<dynamic> get unitHistory => _unitHistory;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   
@@ -21,6 +23,7 @@ class UnitsViewModel extends ChangeNotifier {
 
   void reset() {
     _units = [];
+    _unitHistory = [];
     _isLoading = false;
     _errorMessage = null;
     page = 1;
@@ -83,13 +86,12 @@ class UnitsViewModel extends ChangeNotifier {
           };
           break;
         case 'OPERADOR':
-          // Using manual data filled by the user in OperatorDataView
           endpoint = '/api/appPitwall/operador/';
           params = {
-            "operadorName": user.nombre.toLowerCase(),
-            "operadorLastName1": user.apPaterno.toLowerCase(),
-            "operadorLastName2": user.apMaterno.toLowerCase(),
-            "unidad": user.assignedUnit ?? "B1019" // Fallback to provided B1019 if somehow missing
+            "operadorName": user.nombre.toLowerCase().trim(),
+            "operadorLastName1": user.apPaterno.toLowerCase().trim(),
+            "operadorLastName2": user.apMaterno.toLowerCase().trim(),
+            "unidad": user.assignedUnit ?? "B1019"
           };
           break;
         case 'TALLER':
@@ -102,10 +104,6 @@ class UnitsViewModel extends ChangeNotifier {
           break;
         default:
           throw Exception('Rol no reconocido: ${user.rol}');
-      }
-
-      if (RequestServ.modeDebug) {
-        print("Fetching units for role ${user.rol} at $endpoint with params $params");
       }
 
       final response = await RequestServ.get(endpoint, params);
@@ -131,11 +129,59 @@ class UnitsViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchUnitHistory(UserModel user, String unitName) async {
+    _isLoading = true;
+    _unitHistory = [];
+    notifyListeners();
+
+    try {
+      String endpoint = '';
+      Map<String, dynamic> params = {};
+
+      switch (user.rol.toUpperCase()) {
+        case 'ADMIN':
+        case 'ADMINISTRADOR':
+          endpoint = '/api/appPitwall/admin/';
+          params = {"accion": "getReportesUnidad", "unidad": unitName};
+          break;
+        case 'SUPERVISOR':
+          endpoint = '/api/appPitwall/supervisor/';
+          params = {"accion": "getReportesUnidad", "unidad": unitName};
+          break;
+        case 'TALLER':
+          endpoint = '/api/appPitwall/taller/';
+          params = {"accion": "getReportesUnidad", "unidad": unitName};
+          break;
+        case 'OPERADOR':
+          endpoint = '/api/appPitwall/operador/';
+          params = {
+            "accion": "getReportesUnidad",
+            "operadorName": user.nombre.toLowerCase().trim(),
+            "unidad": unitName
+          };
+          break;
+      }
+
+      final response = await RequestServ.get(endpoint, params);
+      final data = ResponseServ.handleResponse(response);
+      
+      if (data is List) {
+        _unitHistory = data;
+      } else if (data is Map) {
+        _unitHistory = data['history'] ?? data['data'] ?? [];
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> createCita(UserModel user, String unidadNombre, String reporteFalla, List<String> failureTypes, String fechaPedida) async {
     _isLoading = true;
     notifyListeners();
     try {
-      // Combine failure types with description
       final String combinedReport = failureTypes.isNotEmpty 
           ? "Tipos de falla: ${failureTypes.join(', ')}. \nDescripción: $reporteFalla"
           : reporteFalla;
@@ -150,7 +196,7 @@ class UnitsViewModel extends ChangeNotifier {
         "sucursal": user.sucursal
       };
 
-      final response = await RequestServ.post('/api/appPitwall/citas/', body);
+      final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
       ResponseServ.handleResponse(response);
       
       _isLoading = false;
@@ -160,22 +206,6 @@ class UnitsViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
-    }
-  }
-
-  // Placeholder for history fetch - will need endpoint confirmation
-  Future<List<dynamic>> fetchUnitHistory(String unitName) async {
-    try {
-      // Assuming a similar pattern for history
-      final response = await RequestServ.get('/api/appPitwall/citas/', {
-        "action": "history",
-        "unidad": unitName
-      });
-      final data = ResponseServ.handleResponse(response);
-      return data is List ? data : [];
-    } catch (e) {
-      if (kDebugMode) print("Error fetching history: $e");
-      return [];
     }
   }
 
@@ -189,7 +219,7 @@ class UnitsViewModel extends ChangeNotifier {
         "usuario": user.id
       };
 
-      final response = await RequestServ.post('/api/appPitwall/citas/', body);
+      final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
       ResponseServ.handleResponse(response);
       
       _isLoading = false;
@@ -201,47 +231,4 @@ class UnitsViewModel extends ChangeNotifier {
       return false;
     }
   }
-
-  // region HISTORY
-  final String urlhistory= "https://nuevosistema.busmen.net/WS/aplicacionmovil/app_history_pre_odt.php";
-  bool isLoadingHistory = false;
-  List<HistoryModel> unitHistory = [];
-
-  Future<void> fetchHistory(String idUnit) async {
-    isLoadingHistory = true;
-    unitHistory = [];
-    notifyListeners();
-
-    RequestServ requestServ = RequestServ();
-
-    try {
-      final responseString = await requestServ.handlingRequest(
-        urlParam: urlhistory,
-        params: {
-          "id": idUnit,
-        },
-      );
-
-      if (responseString == null) return;
-
-      final Map<String, dynamic> responseJson = jsonDecode(responseString);
-      
-      if (responseJson.containsKey('data') && responseJson['data'] is List) {
-        final List<dynamic> dataList = responseJson['data'];
-        unitHistory = dataList.map((json) => HistoryModel.fromJson(json)).toList();
-      }
-
-      if (RequestServ.modeDebug) {
-        print("History loaded: ${unitHistory.length} items");
-      }
-
-    } catch (e) {
-      if (RequestServ.modeDebug) print("Error fetching history: $e");
-    } finally {
-      isLoadingHistory = false;
-      notifyListeners();
-    }
-  }
-  // endregion HISTORY
-
 }

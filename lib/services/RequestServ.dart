@@ -5,19 +5,30 @@ class RequestServ {
   static const String baseUrl = 'https://nuevosistema.busmen.net';
   static const bool modeDebug = true;
 
-
-  static Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
+  static Future<http.Response> post(String endpoint, Map<String, dynamic> body, {bool asJson = true}) async {
     final url = Uri.parse('$baseUrl$endpoint');
+    
+    Map<String, String> headers = {};
+    dynamic encodedBody;
 
-    if(modeDebug){
+    if (asJson) {
+      headers = {'Content-Type': 'application/json'};
+      encodedBody = jsonEncode(body);
+    } else {
+      headers = {'Content-Type': 'application/x-www-form-urlencoded'};
+      encodedBody = body.map((key, value) => MapEntry(key, value.toString()));
+    }
+
+    if (modeDebug) {
       print("[ POST ] FINAL URL: $url");
       print("[ POST ] FINAL PARAM: $body");
+      print("[ POST ] AS JSON: $asJson");
     }
 
     return await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
+      headers: headers,
+      body: encodedBody,
     );
   }
 
@@ -26,7 +37,7 @@ class RequestServ {
       queryParameters: queryParams?.map((key, value) => MapEntry(key, value.toString())) ?? {},
     );
 
-    if(modeDebug){
+    if (modeDebug) {
       print("[ GET ] FINAL URL: $url");
       print("[ GET ] FINAL PARAM: $queryParams");
     }
@@ -43,24 +54,18 @@ class RequestServ {
     bool asJson = false,
   }) async {
     try {
-
-      String fullUrl = urlParam;
-
       http.Response response;
-      print("[ $method ] url => $fullUrl");
-      print("[ $method ] params => $params");
+      if (modeDebug) {
+        print("[ $method ] url => $urlParam");
+        print("[ $method ] params => $params");
+      }
 
       if (method.toUpperCase() == 'GET') {
-        // Si es GET, arma la URL con o sin parámetros
-        Uri uri;
-        if (params != null && params.isNotEmpty) {
-          uri = Uri.parse(fullUrl).replace(queryParameters: params);
-        } else {
-          uri = Uri.parse(fullUrl);
-        }
+        final uri = params != null && params.isNotEmpty
+            ? Uri.parse(urlParam).replace(queryParameters: params.map((k, v) => MapEntry(k, v.toString())))
+            : Uri.parse(urlParam);
         response = await http.get(uri).timeout(const Duration(seconds: 10));
       } else {
-        // Para otros métodos, construye body y headers
         dynamic body;
         Map<String, String>? headers;
 
@@ -74,41 +79,23 @@ class RequestServ {
           }
         }
 
-        Uri uri = Uri.parse(fullUrl);
-
+        Uri uri = Uri.parse(urlParam);
         switch (method.toUpperCase()) {
           case 'POST':
-            response = await http.post(uri, body: body, headers: headers)
-                .timeout(const Duration(seconds: 10));
-            break;
-          case 'PUT':
-            response = await http.put(uri, body: body, headers: headers)
-                .timeout(const Duration(seconds: 10));
-            break;
-          case 'PATCH':
-            response = await http.patch(uri, body: body, headers: headers)
-                .timeout(const Duration(seconds: 10));
-            break;
-          case 'DELETE':
-            response = await http.delete(uri, body: body, headers: headers)
-                .timeout(const Duration(seconds: 10));
+            response = await http.post(uri, body: body, headers: headers).timeout(const Duration(seconds: 10));
             break;
           default:
-            throw UnsupportedError("HTTP method $method no soportado");
+            throw UnsupportedError("HTTP method $method no soportado en legacy");
         }
       }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return response.body;
-      } else {
-        // print("HTTP error: ${response.statusCode}");
-        // print("response => ${response.headers}");
-        return null;
       }
+      return null;
     } catch (e) {
-      // print("Error en handlingRequest: $e");
+      if (modeDebug) print("Error en handlingRequest: $e");
       return null;
     }
   }
-
 }
