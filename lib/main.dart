@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:pitbus_app/services/request_service.dart';
 import 'package:provider/provider.dart';
 import 'views/login_view.dart';
+import 'views/units_view.dart';
+import 'views/operator_data_view.dart';
 import 'view_models/login_view_model.dart';
 import 'view_models/units_view_model.dart';
 import 'services/UserSession.dart';
-<<<<<<< HEAD
-<<<<<<< HEAD
 import 'services/RequestServ.dart';
 
 void main() {
@@ -20,16 +19,6 @@ void main() {
       child: const MyApp(),
     ),
   );
-=======
-
-void main() {
-  runApp(const MyApp());
->>>>>>> parent of 6464dde (Add new functionalitys for views)
-=======
-
-void main() {
-  runApp(const MyApp());
->>>>>>> parent of 6464dde (Add new functionalitys for views)
 }
 
 class MyApp extends StatelessWidget {
@@ -37,25 +26,32 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => UserSession()),
-        ChangeNotifierProvider(create: (_) => LoginViewModel()),
-        ChangeNotifierProvider(create: (_) => UnitsViewModel()),
-      ],
-      child: MaterialApp(
-        title: 'PitBus Units',
-        debugShowCheckedModeBanner: RequestServ.modeDebug,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2196F3),
-            primary: const Color(0xFF2196F3),
-            secondary: const Color(0xFF03A9F4),
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
+    return MaterialApp(
+      title: 'PitBus Units',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2196F3),
+          primary: const Color(0xFF2196F3),
+          secondary: const Color(0xFF03A9F4),
         ),
-        home: const LoginView(),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+      ),
+      home: Consumer<UserSession>(
+        builder: (context, userSession, child) {
+          if (!userSession.isLoggedIn) {
+            return const LoginView();
+          }
+          
+          final user = userSession.user;
+          // If operator hasn't filled manual data (assignedUnit is missing), send to collection view
+          if (user?.rol == 'OPERADOR' && (user?.assignedUnit == null || user!.assignedUnit!.isEmpty)) {
+            return const OperatorDataView();
+          }
+          
+          return const UnitsView();
+        },
       ),
     );
   }
