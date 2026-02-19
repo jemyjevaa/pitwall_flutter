@@ -1,12 +1,12 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/user_model.dart';
 
-class UserSession {
-  static final UserSession _instance = UserSession._internal();
-  SharedPreferences? _prefs;
+class UserSession extends ChangeNotifier {
+  UserModel? _user;
+  static const String _sessionKey = 'user_session';
 
-<<<<<<<< HEAD:lib/services/UserSession.dart
   UserModel? get user => _user;
   bool get isLoggedIn => _user != null;
 
@@ -29,63 +29,38 @@ class UserSession {
       _saveSession(user);
     }
     notifyListeners();
-========
-  factory UserSession() {
-    return _instance;
->>>>>>>> parent of 6464dde (Add new functionalitys for views):lib/services/user_session_service.dart
   }
 
-  UserSession._internal();
-
-  Future<void> init() async {
-    _prefs ??= await SharedPreferences.getInstance();
+  void updateUserDetails({
+    String? nombre,
+    String? apPaterno,
+    String? apMaterno,
+    String? assignedUnit,
+    bool persist = true,
+  }) {
+    if (_user != null) {
+      _user = _user!.copyWith(
+        nombre: nombre,
+        apPaterno: apPaterno,
+        apMaterno: apMaterno,
+        assignedUnit: assignedUnit,
+      );
+      if (persist) {
+        _saveSession(_user!);
+      }
+      notifyListeners();
+    }
   }
 
-  bool get isLogin => _prefs?.getBool('isLogin') ?? false;
-  set isLogin(bool value) => _prefs?.setBool('isLogin', value);
+  Future<void> _saveSession(UserModel user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionKey, jsonEncode(user.toJson()));
+  }
 
-<<<<<<<< HEAD:lib/services/UserSession.dart
   Future<void> logout() async {
     _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessionKey);
     notifyListeners();
-========
-  // region persist data user
-
-  String  get rolUser => _prefs?.getString('rolUser') ?? "admin";
-  set rolUser(String value) => _prefs?.setString('rolUser', value);
-
-
-
-  // Limpiar datos
-  Future<void> clear() async {
-    isLogin = false;
-    rolUser = "";
->>>>>>>> parent of 6464dde (Add new functionalitys for views):lib/services/user_session_service.dart
-=======
-=======
->>>>>>> parent of 6464dde (Add new functionalitys for views)
-import 'package:flutter/material.dart';
-import '../models/user_model.dart';
-
-class UserSession extends ChangeNotifier {
-  UserModel? _user;
-
-  UserModel? get user => _user;
-  bool get isLoggedIn => _user != null;
-
-  void setUser(UserModel user) {
-    _user = user;
-    notifyListeners();
-  }
-
-  void logout() {
-    _user = null;
-    notifyListeners();
-<<<<<<< HEAD
->>>>>>> parent of 6464dde (Add new functionalitys for views)
-=======
->>>>>>> parent of 6464dde (Add new functionalitys for views)
   }
 }

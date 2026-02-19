@@ -9,7 +9,7 @@ class LoginViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  Future<bool> login(BuildContext context, String usuario, String password) async {
+  Future<bool> login(BuildContext context, String usuario, String password, {bool persist = false}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -24,7 +24,9 @@ class LoginViewModel extends ChangeNotifier {
       final data = ResponseServ.handleResponse(response);
       
       final user = UserModel.fromJson(data);
-      Provider.of<UserSession>(context, listen: false).setUser(user);
+      if (context.mounted) {
+        Provider.of<UserSession>(context, listen: false).setUser(user, persist: persist);
+      }
       
       _isLoading = false;
       notifyListeners();
@@ -32,9 +34,11 @@ class LoginViewModel extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
       return false;
     }
   }
