@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserSession {
@@ -63,6 +64,8 @@ class UserSession {
     rolUser = "";
 >>>>>>>> parent of 6464dde (Add new functionalitys for views):lib/services/user_session_service.dart
 =======
+=======
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 
@@ -80,6 +83,9 @@ class UserSession extends ChangeNotifier {
   void logout() {
     _user = null;
     notifyListeners();
+<<<<<<< HEAD
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
+=======
 >>>>>>> parent of 6464dde (Add new functionalitys for views)
   }
 }

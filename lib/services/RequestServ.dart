@@ -3,8 +3,12 @@ import 'package:http/http.dart' as http;
 
 class RequestServ {
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 <<<<<<<< HEAD:lib/services/RequestServ.dart
+=======
+  static const String baseUrl = 'https://nuevosistema.busmen.net';
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
 =======
   static const String baseUrl = 'https://nuevosistema.busmen.net';
 >>>>>>> parent of 6464dde (Add new functionalitys for views)
@@ -16,6 +20,7 @@ class RequestServ {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
+<<<<<<< HEAD
 <<<<<<< HEAD
 ========
   static bool modeDebug = true;
@@ -143,6 +148,8 @@ class RequestServ {
   }
 
 =======
+=======
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
   }
 
   static Future<http.Response> get(String endpoint, Map<String, dynamic>? queryParams) async {
@@ -156,5 +163,8 @@ class RequestServ {
       "Content-Type": "application/json",
     });
   }
+<<<<<<< HEAD
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
+=======
 >>>>>>> parent of 6464dde (Add new functionalitys for views)
 }

@@ -6,6 +6,7 @@ import 'view_models/login_view_model.dart';
 import 'view_models/units_view_model.dart';
 import 'services/UserSession.dart';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'services/RequestServ.dart';
 
 void main() {
@@ -19,6 +20,11 @@ void main() {
       child: const MyApp(),
     ),
   );
+=======
+
+void main() {
+  runApp(const MyApp());
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
 =======
 
 void main() {

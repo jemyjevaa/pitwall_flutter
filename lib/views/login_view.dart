@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../view_models/login_view_model.dart';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import '../services/UserSession.dart';
 import 'operator_data_view.dart';
+=======
+>>>>>>> parent of 6464dde (Add new functionalitys for views)
 =======
 >>>>>>> parent of 6464dde (Add new functionalitys for views)
 import 'units_view.dart';
