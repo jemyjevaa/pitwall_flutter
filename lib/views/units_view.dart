@@ -309,9 +309,15 @@ class UnitCard extends StatelessWidget {
     final user = Provider.of<UserSession>(context, listen: false).user;
     
     return GestureDetector(
-      onTap: () => _showHistoryModal(context, unit),
+      onTap: () {
+        if (user?.rol == 'OPERADOR') {
+          _showCreateCitaModal(context, unit);
+        } else {
+          _showHistoryModal(context, unit);
+        }
+      },
       onLongPress: (user?.rol == 'OPERADOR') 
-          ? () => _showCreateCitaModal(context, unit) 
+          ? () => _showHistoryModal(context, unit) 
           : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 24.0),
@@ -501,13 +507,7 @@ class UnitCard extends StatelessWidget {
               if (user == null) return const SizedBox.shrink();
 
               if (user.rol == 'OPERADOR') {
-                return _buildActionButton(
-                  "REPORTAR FALLA CRÍTICA", 
-                  Icons.warning_amber_rounded, 
-                  constraints.maxWidth, 
-                  Colors.orange[800]!, 
-                  () => _showCreateCitaModal(context, unit)
-                );
+                return const SizedBox.shrink(); // No explicit button, use gestures
               } else if (user.rol == 'TALLER') {
                 return _buildActionRow(constraints.maxWidth, unit, context);
               }
@@ -683,6 +683,8 @@ class _UnitHistoryModalState extends State<_UnitHistoryModal> {
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = Provider.of<UnitsViewModel>(context, listen: false);
+
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
@@ -695,8 +697,8 @@ class _UnitHistoryModalState extends State<_UnitHistoryModal> {
           ),
           child: Column(
             children: [
+              const SizedBox(height: 12),
               Container(
-                margin: const EdgeInsets.only(top: 12),
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
@@ -704,64 +706,49 @@ class _UnitHistoryModalState extends State<_UnitHistoryModal> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A237E).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.history_rounded, color: Color(0xFF1A237E)),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Historial de Arreglos",
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1A237E)),
-                          ),
-                          Text(
-                            "Unidad ${widget.unit.name}",
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              const Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Text(
+                  "Historial de Servicios",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1A237E),
+                  ),
                 ),
               ),
               Expanded(
-                child: Consumer<UnitsViewModel>(
-                  builder: (context, viewModel, child) {
-                    if (viewModel.isLoadingHistory) {
-                      return const Center(child: CircularProgressIndicator(color: Color(0xFF1A237E)));
+                child: FutureBuilder<List<dynamic>>(
+                  future: viewModel.fetchUnitHistory(unit.name),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (viewModel.unitHistory.isEmpty) {
+                    if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.grey[300]),
                             const SizedBox(height: 16),
-                            Text("No hay historial disponible", style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                            const Text(
+                              "No hay historial disponible",
+                              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+                            ),
                           ],
                         ),
                       );
                     }
-                    
+
+                    final history = snapshot.data!;
                     return ListView.builder(
                       controller: controller,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                      itemCount: viewModel.unitHistory.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: history.length,
                       itemBuilder: (context, index) {
-                        final history = viewModel.unitHistory[index];
-                        return _buildHistoryItem(history, index == viewModel.unitHistory.length - 1);
+                        final item = history[index];
+                        return _buildHistoryItem(item);
                       },
                     );
                   },
@@ -774,141 +761,81 @@ class _UnitHistoryModalState extends State<_UnitHistoryModal> {
     );
   }
 
-  Widget _buildHistoryItem(HistoryModel history, bool isLast) {
-    Color statusColor;
-    IconData statusIcon;
-    
-    switch (history.status.toLowerCase()) {
-      case 'cancelada':
-        statusColor = Colors.red[400]!;
-        statusIcon = Icons.cancel_rounded;
-        break;
-      case 'terminada':
-      case 'completada':
-        statusColor = Colors.green[400]!;
-        statusIcon = Icons.check_circle_rounded;
-        break;
-      case 'en proceso':
-        statusColor = Colors.blue[400]!;
-        statusIcon = Icons.sync_rounded;
-        break;
-      default:
-        statusColor = Colors.orange[400]!;
-        statusIcon = Icons.pending_actions_rounded;
-    }
+  Widget _buildHistoryItem(dynamic item) {
+    // Basic mapping from common ODT/Cita patterns
+    final String folio = item['folio']?.toString() ?? item['Id_pre_odt']?.toString() ?? 'N/A';
+    final String date = item['fecha']?.toString() ?? item['fecha_registro']?.toString() ?? 'N/A';
+    final String status = item['status_name']?.toString() ?? item['status']?.toString() ?? 'Pendiente';
+    final String description = item['reporte_falla']?.toString() ?? item['concepto']?.toString() ?? 'Sin descripción';
 
-    return IntrinsicHeight(
-      child: Row(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline logic
-          Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: statusColor, width: 2),
+              Text(
+                "FOLIO: $folio",
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  color: Color(0xFF1A237E),
                 ),
-                child: Icon(statusIcon, size: 18, color: statusColor),
               ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: Colors.grey[300],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A237E).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A237E),
                   ),
                 ),
+              ),
             ],
           ),
-          const SizedBox(width: 16),
-          // Content
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 24),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                border: Border.all(color: Colors.grey[100]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          history.status.toUpperCase(),
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: statusColor, letterSpacing: 0.5),
-                        ),
-                      ),
-                      Text(
-                        history.fechaCreacion,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[400]),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (history.folioOdt.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Text(
-                        "FOLIO: ${history.folioOdt}",
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1A237E)),
-                      ),
-                    ),
-                  Text(
-                    "ACTIVIDADES:",
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey[500], letterSpacing: 1),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    history.actividades,
-                    style: const TextStyle(fontSize: 13, height: 1.5, fontWeight: FontWeight.w500, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 16),
-                  Divider(color: Colors.grey[50]),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 10,
-                        backgroundColor: Colors.grey[200],
-                        child: Text(
-                          history.userCreated.isNotEmpty ? history.userCreated[0].toUpperCase() : "?",
-                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey[600]),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "Solicitado por: ",
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                      ),
-                      Text(
-                        history.userCreated,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[800],
+              fontWeight: FontWeight.w500,
             ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey),
+              const SizedBox(width: 6),
+              Text(
+                date,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -926,7 +853,21 @@ class _CreateCitaModal extends StatefulWidget {
 
 class _CreateCitaModalState extends State<_CreateCitaModal> {
   final _fallaController = TextEditingController();
+  final _tipoFallaController = TextEditingController();
+  final List<String> _failureTypes = [];
   DateTime? _selectedDate;
+
+  void _addFailureType() {
+    final text = _tipoFallaController.text.trim();
+    if (text.isNotEmpty) {
+      setState(() {
+        if (!_failureTypes.contains(text)) {
+          _failureTypes.add(text);
+        }
+        _tipoFallaController.clear();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -964,12 +905,60 @@ class _CreateCitaModalState extends State<_CreateCitaModal> {
               "Describe el problema de la unidad ${widget.unit.name}", 
               style: TextStyle(fontSize: 14, color: Colors.grey[600])
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            
+            // New: Types of failure input
+            const Text(
+              "Tipos de falla",
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _tipoFallaController,
+              decoration: InputDecoration(
+                hintText: "Escribe un tipo de falla...",
+                filled: true,
+                fillColor: Colors.grey[50],
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add_circle_rounded, color: Color(0xFF1A237E)),
+                  onPressed: _addFailureType,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey[200]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFF1A237E), width: 1.5),
+                ),
+              ),
+              onSubmitted: (_) => _addFailureType(),
+            ),
+            if (_failureTypes.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: _failureTypes.map((type) => Chip(
+                  label: Text(type, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  backgroundColor: const Color(0xFFE8EAF6),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  onDeleted: () {
+                    setState(() {
+                      _failureTypes.remove(type);
+                    });
+                  },
+                )).toList(),
+              ),
+            ],
+            const SizedBox(height: 24),
+            
             TextField(
               controller: _fallaController,
-              maxLines: 4,
+              maxLines: 3,
               decoration: InputDecoration(
-                labelText: "Descripción de la falla",
+                labelText: "Descripción detallada",
                 alignLabelWithHint: true,
                 filled: true,
                 fillColor: Colors.grey[50],
@@ -1038,11 +1027,17 @@ class _CreateCitaModalState extends State<_CreateCitaModal> {
                 onPressed: viewModel.isLoading ? null : () async {
                   if (_fallaController.text.isEmpty || _selectedDate == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Por favor rellena todos los campos"))
+                      const SnackBar(content: Text("Por favor rellena descripción y fecha"))
                     );
                     return;
                   }
-                  final success = await viewModel.createCita(user, widget.unit.name, _fallaController.text, _selectedDate.toString().split(' ')[0]);
+                  final success = await viewModel.createCita(
+                    user, 
+                    widget.unit.name, 
+                    _fallaController.text, 
+                    _failureTypes,
+                    _selectedDate.toString().split(' ')[0]
+                  );
                   if (mounted && success) Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
@@ -1062,5 +1057,12 @@ class _CreateCitaModalState extends State<_CreateCitaModal> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _fallaController.dispose();
+    _tipoFallaController.dispose();
+    super.dispose();
   }
 }

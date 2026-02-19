@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../view_models/login_view_model.dart';
+import '../services/UserSession.dart';
+import 'operator_data_view.dart';
 import 'units_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -13,6 +15,8 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   final _usuarioController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _rememberMe = true;
 
   @override
   Widget build(BuildContext context) {
@@ -116,32 +120,84 @@ class _LoginViewState extends State<LoginView> {
                           label: 'Usuario',
                           icon: Icons.person_outline_rounded,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         _buildTextField(
                           controller: _passwordController,
                           label: 'Contraseña',
                           icon: Icons.lock_outline_rounded,
                           isPassword: true,
+                          obscureText: _obscurePassword,
+                          togglePassword: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: Checkbox(
+                                value: _rememberMe,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _rememberMe = value ?? false;
+                                  });
+                                },
+                                activeColor: const Color(0xFF1A237E),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _rememberMe = !_rememberMe;
+                                });
+                              },
+                              child: Text(
+                                'Mantener sesión iniciada',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 32),
                         Consumer<LoginViewModel>(
                           builder: (context, viewModel, child) {
                             return ElevatedButton(
                               onPressed: viewModel.isLoading
-                                  ? null
-                                  : () async {
-                                      final success = await viewModel.login(
-                                        context,
-                                        _usuarioController.text,
-                                        _passwordController.text,
-                                      );
-                                      if (success && mounted) {
-                                        Navigator.pushReplacement(
+                                    ? null
+                                    : () async {
+                                        final success = await viewModel.login(
                                           context,
-                                          MaterialPageRoute(builder: (_) => const UnitsView()),
+                                          _usuarioController.text,
+                                          _passwordController.text,
+                                          persist: _rememberMe,
                                         );
-                                      }
-                                    },
+                                        if (success && mounted) {
+                                          final user = Provider.of<UserSession>(context, listen: false).user;
+                                          if (user?.rol == 'OPERADOR') {
+                                            Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(builder: (_) => const OperatorDataView()),
+                                            );
+                                          } else {
+                                            Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(builder: (_) => const UnitsView()),
+                                            );
+                                          }
+                                        }
+                                      },
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 18),
                                 backgroundColor: const Color(0xFF1A237E),
@@ -195,18 +251,30 @@ class _LoginViewState extends State<LoginView> {
     required String label,
     required IconData icon,
     bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? togglePassword,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? obscureText : false,
           style: const TextStyle(fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             labelText: label,
             labelStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
             prefixIcon: Icon(icon, color: const Color(0xFF1A237E), size: 22),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                      color: Colors.grey[400],
+                      size: 20,
+                    ),
+                    onPressed: togglePassword,
+                  )
+                : null,
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey[300]!),
