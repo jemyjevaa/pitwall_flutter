@@ -13,13 +13,14 @@ class ResponseServ {
       final decodedData = jsonDecode(response.body);
       
       // If success is explicitly false, throw error
-      if (decodedData['success'] == false) {
-        throw Exception(decodedData['message'] ?? 'Error informado por el servidor');
-      }
+      // if (decodedData['success'] == false) {
+      //   throw Exception(decodedData['message'] ?? 'Error informado por el servidor');
+      // }
       
       // Return data if present, otherwise return the whole body
       return decodedData['data'] ?? decodedData;
     } else {
+      return [];
       throw Exception('Error de conexión: ${response.statusCode}');
     }
   }

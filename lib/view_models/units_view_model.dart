@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:pitbus_app/services/RequestServ.dart';
@@ -14,17 +15,50 @@ class UnitsViewModel extends ChangeNotifier {
   List<UnitModel> get units => _units;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  
+  int page = 1;
+  int totalPages = 0;
 
   void reset() {
     _units = [];
     _isLoading = false;
     _errorMessage = null;
+    page = 1;
+    totalPages = 0;
     notifyListeners();
+  }
+
+  Future<void> nextPage(UserModel user) async {
+    if (page < totalPages) {
+      page++;
+      await fetchUnitsByRole(user);
+    }
+  }
+
+  Future<void> previousPage(UserModel user) async {
+    if (page > 1) {
+      page--;
+      await fetchUnitsByRole(user);
+    }
+  }
+
+  Future<void> goToFirstPage(UserModel user) async {
+    if (page != 1) {
+      page = 1;
+      await fetchUnitsByRole(user);
+    }
+  }
+
+  Future<void> goToLastPage(UserModel user) async {
+    if (page != totalPages && totalPages > 0) {
+      page = totalPages;
+      await fetchUnitsByRole(user);
+    }
   }
 
   Future<void> fetchUnitsByRole(UserModel user) async {
     _isLoading = true;
-    _units = []; // Clear previous units
+    _units = []; 
     _errorMessage = null;
     notifyListeners();
 
@@ -32,15 +66,21 @@ class UnitsViewModel extends ChangeNotifier {
       String endpoint = '';
       Map<String, dynamic> params = {};
 
-      switch (user.rol) {
+      switch (user.rol.toUpperCase()) {
         case 'ADMIN':
         case 'ADMINISTRADOR':
           endpoint = '/api/appPitwall/admin/';
-          params = {"accion": "getUnidades"};
+          params = {
+            "accion": "getUnidades",
+            "page": page
+          };
           break;
         case 'SUPERVISOR':
           endpoint = '/api/appPitwall/supervisor/';
-          params = {"idSupervisor": user.id};
+          params = {
+            "idSupervisor": user.id,
+            "page": page
+          };
           break;
         case 'OPERADOR':
           // Using manual data filled by the user in OperatorDataView
@@ -56,23 +96,19 @@ class UnitsViewModel extends ChangeNotifier {
           endpoint = '/api/appPitwall/taller/';
           params = {
             "accion": "getUnidades",
-            "sucursal": user.sucursal
+            "sucursal": user.sucursal,
+            "page": page
           };
           break;
         default:
           throw Exception('Rol no reconocido: ${user.rol}');
       }
 
-      if (kDebugMode) {
+      if (RequestServ.modeDebug) {
         print("Fetching units for role ${user.rol} at $endpoint with params $params");
       }
 
       final response = await RequestServ.get(endpoint, params);
-      
-      if (kDebugMode) {
-        print("Response status: ${response.statusCode}");
-      }
-      
       final data = ResponseServ.handleResponse(response);
       
       List<dynamic> unitsJson = [];
@@ -80,10 +116,9 @@ class UnitsViewModel extends ChangeNotifier {
         unitsJson = data;
       } else if (data is Map) {
         unitsJson = data['units'] ?? data['data'] ?? [];
-      }
-      
-      if (kDebugMode) {
-        print("Parsed ${unitsJson.length} units for role ${user.rol}");
+        if (data.containsKey('pagination')) {
+          totalPages = data['pagination']["totalPages"] ?? 0;
+        }
       }
       
       _units = unitsJson.map((json) => UnitModel.fromJson(json)).toList();
@@ -166,4 +201,47 @@ class UnitsViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  // region HISTORY
+  final String urlhistory= "https://nuevosistema.busmen.net/WS/aplicacionmovil/app_history_pre_odt.php";
+  bool isLoadingHistory = false;
+  List<HistoryModel> unitHistory = [];
+
+  Future<void> fetchHistory(String idUnit) async {
+    isLoadingHistory = true;
+    unitHistory = [];
+    notifyListeners();
+
+    RequestServ requestServ = RequestServ();
+
+    try {
+      final responseString = await requestServ.handlingRequest(
+        urlParam: urlhistory,
+        params: {
+          "id": idUnit,
+        },
+      );
+
+      if (responseString == null) return;
+
+      final Map<String, dynamic> responseJson = jsonDecode(responseString);
+      
+      if (responseJson.containsKey('data') && responseJson['data'] is List) {
+        final List<dynamic> dataList = responseJson['data'];
+        unitHistory = dataList.map((json) => HistoryModel.fromJson(json)).toList();
+      }
+
+      if (RequestServ.modeDebug) {
+        print("History loaded: ${unitHistory.length} items");
+      }
+
+    } catch (e) {
+      if (RequestServ.modeDebug) print("Error fetching history: $e");
+    } finally {
+      isLoadingHistory = false;
+      notifyListeners();
+    }
+  }
+  // endregion HISTORY
+
 }

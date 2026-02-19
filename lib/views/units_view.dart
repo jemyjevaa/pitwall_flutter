@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../view_models/units_view_model.dart';
 import '../models/unit_model.dart';
+import '../models/history_model.dart';
 import '../services/UserSession.dart';
 import 'odt_view.dart';
 import 'login_view.dart';
@@ -106,16 +107,71 @@ class _UnitsViewState extends State<UnitsView> {
             return const Center(child: Text("No hay unidades disponibles"));
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: viewModel.units.length,
-            itemBuilder: (context, index) {
-              final unit = viewModel.units[index];
-              return UnitCard(unit: unit);
-            },
+          return Column(
+            children: [
+              if (user != null) _buildPaginationControls(viewModel, user),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  itemCount: viewModel.units.length,
+                  itemBuilder: (context, index) {
+                    final unit = viewModel.units[index];
+                    return UnitCard(unit: unit);
+                  },
+                ),
+              ),
+              if (user != null) _buildPaginationControls(viewModel, user),
+            ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildPaginationControls(UnitsViewModel viewModel, user) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _paginationButton(
+            icon: Icons.first_page_rounded,
+            onPressed: viewModel.page > 1 ? () => viewModel.goToFirstPage(user) : null,
+          ),
+          _paginationButton(
+            icon: Icons.chevron_left_rounded,
+            onPressed: viewModel.page > 1 ? () => viewModel.previousPage(user) : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "Página ${viewModel.page} de ${viewModel.totalPages}",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A237E)),
+            ),
+          ),
+          _paginationButton(
+            icon: Icons.chevron_right_rounded,
+            onPressed: viewModel.page < viewModel.totalPages ? () => viewModel.nextPage(user) : null,
+          ),
+          _paginationButton(
+            icon: Icons.last_page_rounded,
+            onPressed: (viewModel.page < viewModel.totalPages && viewModel.totalPages > 0) 
+                ? () => viewModel.goToLastPage(user) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paginationButton({required IconData icon, VoidCallback? onPressed}) {
+    return IconButton(
+      icon: Icon(icon),
+      onPressed: onPressed,
+      color: const Color(0xFF1A237E),
+      disabledColor: Colors.grey[300],
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
     );
   }
 
@@ -270,7 +326,7 @@ class UnitCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24.0),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF1A237E).withOpacity(0.08),
+              color: const Color(0xFF1A237E).withOpacity(0.08),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -331,7 +387,7 @@ class UnitCard extends StatelessWidget {
                                   margin: const EdgeInsets.only(top: 8),
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Color(0xFF2196F3).withOpacity(0.08),
+                                    color: const Color(0xFF2196F3).withOpacity(0.08),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
@@ -410,7 +466,14 @@ class UnitCard extends StatelessWidget {
     );
   }
 
-
+  void _showCreateCitaModal(BuildContext context, UnitModel unit) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CreateCitaModal(unit: unit),
+    );
+  }
 
   Widget _buildDetailGrid(UnitModel unit) {
     return LayoutBuilder(
@@ -520,11 +583,6 @@ class UnitCard extends StatelessWidget {
 
     final viewModel = Provider.of<UnitsViewModel>(context, listen: false);
     
-    // id_pre_odt: Usually found in unit data if it's a Taller view of units with reports
-    // For now, using a placeholder or checking if unit model has it (unlikely without update)
-    // Actually, user said: POST /api/appPitwall/citas/ { "Id_pre_odt": 1238, ... }
-    // If unit doesn't have id_pre_odt, this won't work.
-    
     final success = await viewModel.updateCitaStatus(user, 0, status); // 0 is placeholder
     
     if (context.mounted) {
@@ -535,15 +593,6 @@ class UnitCard extends StatelessWidget {
         ),
       );
     }
-  }
-
-  void _showCreateCitaModal(BuildContext context, UnitModel unit) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CreateCitaModal(unit: unit),
-    );
   }
 
   Color _parseColor(String hexString) {
@@ -615,9 +664,22 @@ class UnitCard extends StatelessWidget {
   }
 }
 
-class _UnitHistoryModal extends StatelessWidget {
+class _UnitHistoryModal extends StatefulWidget {
   final UnitModel unit;
   const _UnitHistoryModal({required this.unit});
+
+  @override
+  State<_UnitHistoryModal> createState() => _UnitHistoryModalState();
+}
+
+class _UnitHistoryModalState extends State<_UnitHistoryModal> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UnitsViewModel>(context, listen: false).fetchHistory(widget.unit.id);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -631,7 +693,7 @@ class _UnitHistoryModal extends StatelessWidget {
         return Container(
           decoration: const BoxDecoration(
             color: Color(0xFFF5F5F7),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
           child: Column(
             children: [
@@ -1004,5 +1066,3 @@ class _CreateCitaModalState extends State<_CreateCitaModal> {
     super.dispose();
   }
 }
-
-
