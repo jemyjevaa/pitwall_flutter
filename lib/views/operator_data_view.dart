@@ -39,7 +39,7 @@ class _OperatorDataViewState extends State<OperatorDataView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   Container(
+                  Container(
                     padding: const EdgeInsets.all(20),
                     decoration: const BoxDecoration(
                       color: Colors.white,
