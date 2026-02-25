@@ -6,6 +6,7 @@ import 'views/units_view.dart';
 import 'views/operator_data_view.dart';
 import 'view_models/login_view_model.dart';
 import 'view_models/units_view_model.dart';
+import 'view_models/form_operator_view_model.dart';
 import 'services/UserSession.dart';
 import 'services/RequestServ.dart';
 
@@ -20,6 +21,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => UserSession()),
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
         ChangeNotifierProvider(create: (_) => UnitsViewModel()),
+        ChangeNotifierProvider(create: (_) => FormOperatorViewModel()), // Agregado aquí
       ],
       child: const MyApp(),
     ),
@@ -47,15 +49,15 @@ class MyApp extends StatelessWidget {
       ),
       home: Consumer<UserSession>(
         builder: (context, userSession, child) {
-          if (!userSession.isLoggedIn) {
+          if (!ContextApp().isLogin) {
             return const LoginView();
           }
           
-          final user = userSession.user;
-          // If operator hasn't filled manual data (assignedUnit is missing), send to collection view
-          if (user?.rol == 'OPERADOR' && (user?.assignedUnit == null || user!.assignedUnit!.isEmpty)) {
-            return const OperatorDataView();
-          }
+          // final user = userSession.user;
+          // // If operator hasn't filled manual data (assignedUnit is missing), send to collection view
+          // if (user?.rol == 'OPERADOR' && (user?.assignedUnit == null || user!.assignedUnit!.isEmpty)) {
+          //   return const OperatorDataView();
+          // }
           
           return const UnitsView();
         },

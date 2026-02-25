@@ -71,6 +71,8 @@ class LoginViewModel extends ChangeNotifier {
       }
       if( ContextApp().isLogin ){
         final user = responseLogin.user!;
+
+        ContextApp().user = user;
         ContextApp().idUser = int.parse(user.id.toString());
         ContextApp().nameUser = user.idUsuario;
         ContextApp().rol = user.rol;
@@ -79,9 +81,10 @@ class LoginViewModel extends ChangeNotifier {
         }
         if( RequestServ.modeDebug ){
           print("[ SAVE CONTEXT ] responseLogin => "
+              "user: ${ContextApp().user} | "
               "idUser: ${ContextApp().idUser} | "
-              "idUser: ${ContextApp().nameUser} | "
-              "idUser: ${ContextApp().rol}");
+              "nameUser: ${ContextApp().nameUser} | "
+              "rol: ${ContextApp().rol}");
         }
 
       }

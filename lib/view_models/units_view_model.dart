@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:pitbus_app/services/context_app.dart';
 import '../services/RequestServ.dart';
 import '../services/ResponseServ.dart';
 import '../models/unit_model.dart';
@@ -174,10 +175,10 @@ class UnitsViewModel extends ChangeNotifier {
           params = {
             "accion": "getUnidades",
             "sucursal": user.sucursal,
-            "unidad": user.assignedUnit ?? "",
-            "operadorName": user.nombre,
-            "operadorLastName1": user.apPaterno,
-            "operadorLastName2": user.apMaterno,
+            "unidad": ContextApp().unitAssOperator,
+            "operadorName": ContextApp().fullNameOperator,
+            "operadorLastName1": ContextApp().firstLastNameOperator,
+            "operadorLastName2": ContextApp().secondLastNameOperator,
           };
           break;
         case 'SUPERVISOR':

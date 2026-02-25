@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/UserSession.dart';
+import '../services/context_app.dart';
+import '../view_models/form_operator_view_model.dart';
 import 'units_view.dart';
 
 class OperatorDataView extends StatefulWidget {
@@ -11,13 +13,11 @@ class OperatorDataView extends StatefulWidget {
 }
 
 class _OperatorDataViewState extends State<OperatorDataView> {
-  final _nombreController = TextEditingController();
-  final _apPaternoController = TextEditingController();
-  final _apMaternoController = TextEditingController();
-  final _unidadController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<FormOperatorViewModel>();
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -81,39 +81,45 @@ class _OperatorDataViewState extends State<OperatorDataView> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _buildTextField(
-                          controller: _nombreController,
+                          controller: viewModel.nombreController,
                           label: 'Nombre(s)',
                           icon: Icons.person_outline_rounded,
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
-                          controller: _apPaternoController,
+                          controller: viewModel.apPaternoController,
                           label: 'Apellido Paterno',
                           icon: Icons.badge_outlined,
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
-                          controller: _apMaternoController,
+                          controller: viewModel.apMaternoController,
                           label: 'Apellido Materno',
                           icon: Icons.badge_outlined,
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
-                          controller: _unidadController,
+                          controller: viewModel.unidadController,
                           label: 'Número de Unidad (ej. B1019)',
                           icon: Icons.directions_bus_filled_rounded,
                         ),
                         const SizedBox(height: 32),
                         ElevatedButton(
                           onPressed: () {
-                            if (_validate()) {
+                            if (_validate(viewModel)) {
                               final session = Provider.of<UserSession>(context, listen: false);
                               session.updateUserDetails(
-                                nombre: _nombreController.text.trim(),
-                                apPaterno: _apPaternoController.text.trim(),
-                                apMaterno: _apMaternoController.text.trim(),
-                                assignedUnit: _unidadController.text.trim().toUpperCase(),
+                                nombre: viewModel.nombreController.text.trim(),
+                                apPaterno: viewModel.apPaternoController.text.trim(),
+                                apMaterno: viewModel.apMaternoController.text.trim(),
+                                assignedUnit: viewModel.unidadController.text.trim().toUpperCase(),
                               );
+                              
+                              ContextApp().fullNameOperator = viewModel.nombreController.text;
+                              ContextApp().firstLastNameOperator = viewModel.apPaternoController.text;
+                              ContextApp().secondLastNameOperator = viewModel.apMaternoController.text;
+                              ContextApp().unitAssOperator = viewModel.unidadController.text;
+
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(builder: (_) => const UnitsView()),
@@ -145,11 +151,11 @@ class _OperatorDataViewState extends State<OperatorDataView> {
     );
   }
 
-  bool _validate() {
-    if (_nombreController.text.isEmpty ||
-        _apPaternoController.text.isEmpty ||
-        _apMaternoController.text.isEmpty ||
-        _unidadController.text.isEmpty) {
+  bool _validate(FormOperatorViewModel viewModel) {
+    if (viewModel.nombreController.text.isEmpty ||
+        viewModel.apPaternoController.text.isEmpty ||
+        viewModel.apMaternoController.text.isEmpty ||
+        viewModel.unidadController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Todos los campos son requeridos')),
       );
@@ -184,14 +190,5 @@ class _OperatorDataViewState extends State<OperatorDataView> {
         contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _nombreController.dispose();
-    _apPaternoController.dispose();
-    _apMaternoController.dispose();
-    _unidadController.dispose();
-    super.dispose();
   }
 }

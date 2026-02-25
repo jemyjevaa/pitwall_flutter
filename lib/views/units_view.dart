@@ -24,18 +24,35 @@ class _UnitsViewState extends State<UnitsView> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final session = Provider.of<UserSession>(context, listen: false);
-      if (session.user != null) {
-        Provider.of<UnitsViewModel>(context, listen: false).fetchUnitsByRole(session.user!);
+
+    if( ContextApp().isDebugMode ){
+      print(" [ ISLOGIN ] USER => ${ContextApp().user} | "
+          "| idUser: ${ContextApp().idUser} "
+          "| nameUser: ${ContextApp().nameUser} "
+          "| rol: ${ContextApp().rol} "
+      );
+      if( ContextApp().rol == "OPERADOR" ){
+        print(" [ ISLOGIN ] OPERATOR => "
+            "| fullNameOperator: ${ContextApp().fullNameOperator} "
+            "| firstLastNameOperator: ${ContextApp().firstLastNameOperator} "
+            "| secondLastNameOperator: ${ContextApp().secondLastNameOperator} "
+            "| unitAssOperator: ${ContextApp().unitAssOperator} "
+        );
       }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // final session = Provider.of<UserSession>(context, listen: false);
+      Provider.of<UnitsViewModel>(context, listen: false).fetchUnitsByRole(ContextApp().user!);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final viewModel = Provider.of<UnitsViewModel>(context);
-    final user = Provider.of<UserSession>(context).user;
+    final user = ContextApp().user!;
+    final bool isOperator = user.rol.toUpperCase() == 'OPERADOR';
+
 
     return Scaffold(
       key: _scaffoldKey,
@@ -123,7 +140,9 @@ class _UnitsViewState extends State<UnitsView> {
                       style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                     Text(
-                      user?.fullName ?? "Usuario",
+                      ContextApp().rol == "OPERADOR"?
+                      ContextApp().fullNameOperator:
+                      (user?.fullName ?? "Usuario"),
                       style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1.1),
                     ),
                   ],
