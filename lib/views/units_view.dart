@@ -20,6 +20,11 @@ class UnitsView extends StatefulWidget {
 
 class _UnitsViewState extends State<UnitsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final user = ContextApp().user!;
+  // late final bool isAdmin = user.rol.toUpperCase() == 'ADMINISTRADOR';
+  late final bool isOperator = user.rol.toUpperCase() == 'OPERADOR' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
+  late final bool isSupervisor = user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
+  late final bool isWorkStation = user.rol.toUpperCase() == 'TALLER' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
 
   @override
   void initState() {
@@ -27,9 +32,9 @@ class _UnitsViewState extends State<UnitsView> {
 
     if( ContextApp().isDebugMode ){
       print(" [ ISLOGIN ] USER => ${ContextApp().user} | "
-          "| idUser: ${ContextApp().idUser} "
-          "| nameUser: ${ContextApp().nameUser} "
-          "| rol: ${ContextApp().rol} "
+          // "| idUser: ${ContextApp().idUser} "
+          // "| nameUser: ${ContextApp().nameUser} "
+          // "| rol: ${ContextApp().rol} "
       );
       if( ContextApp().rol == "OPERADOR" ){
         print(" [ ISLOGIN ] OPERATOR => "
@@ -50,8 +55,6 @@ class _UnitsViewState extends State<UnitsView> {
   @override
   Widget build(BuildContext context) {
     final viewModel = Provider.of<UnitsViewModel>(context);
-    final user = ContextApp().user!;
-    final bool isOperator = user.rol.toUpperCase() == 'OPERADOR';
 
 
     return Scaffold(
@@ -71,7 +74,7 @@ class _UnitsViewState extends State<UnitsView> {
         ),
         actions: [
           // Show citation management button for management roles
-          if (user != null && (user.rol.toUpperCase() == 'TALLER' ||user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMIN' || user.rol.toUpperCase() == 'ADMINISTRADOR'))
+          if (isSupervisor || isWorkStation)
             IconButton(
               icon: const Icon(Icons.pending_actions_rounded, color: Colors.white),
               tooltip: 'Gestionar Citas',
@@ -110,10 +113,6 @@ class _UnitsViewState extends State<UnitsView> {
   }
 
   Widget _buildHeader(dynamic user, UnitsViewModel viewModel) {
-    final bool isSupervisor = user != null && 
-        (user.rol.toUpperCase() == 'SUPERVISOR' || 
-         user.rol.toUpperCase() == 'ADMIN' || 
-         user.rol.toUpperCase() == 'ADMINISTRADOR');
 
     return Container(
       width: double.infinity,
@@ -148,7 +147,7 @@ class _UnitsViewState extends State<UnitsView> {
                   ],
                 ),
               ),
-              if (isSupervisor)
+              if (isWorkStation)
                 _buildFilterToggle(viewModel),
             ],
           ),
@@ -307,9 +306,14 @@ class UnitCard extends StatelessWidget {
   final UnitModel unit;
   const UnitCard({super.key, required this.unit});
 
+
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserSession>(context).user;
+
+    final user = ContextApp().user!;
+
+    late final bool isOperator = user.rol.toUpperCase() == 'OPERADOR' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -376,7 +380,7 @@ class UnitCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      ContextApp().rol == 'OPERADOR'? Expanded(
+                      isOperator? Expanded(
                         child: _buildSmallActionButton(
                           "AGENDAR CITA", 
                           Icons.calendar_today_rounded, 
@@ -396,18 +400,18 @@ class UnitCard extends StatelessWidget {
                     ],
                   ),
                   // "Mis Citas" row — only for OPERADOR role
-                  if ((user?.rol.toUpperCase() ?? '') == 'OPERADOR') ...[  
-                    const SizedBox(height: 12),
-                    _buildSmallActionButton(
-                      "MIS CITAS",
-                      Icons.pending_actions_rounded,
-                      Colors.teal,
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => OperatorCitationsView(unit: unit)),
-                      ),
-                    ),
-                  ],
+                  // if ((user?.rol.toUpperCase() ?? '') == 'OPERADOR') ...[
+                  //   const SizedBox(height: 12),
+                  //   _buildSmallActionButton(
+                  //     "MIS CITAS",
+                  //     Icons.pending_actions_rounded,
+                  //     Colors.teal,
+                  //     () => Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(builder: (context) => OperatorCitationsView(unit: unit)),
+                  //     ),
+                  //   ),
+                  // ],
                 ],
               ),
             ),

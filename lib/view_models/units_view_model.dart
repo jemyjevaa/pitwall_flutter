@@ -60,63 +60,10 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // First get all units in sucursal
-      final response = await RequestServ.get('/api/appPitwall/admin/', {
-        "accion": "getUnidades",
-        "sucursal": user.sucursal,
-        "page": 1
-      });
-      final data = ResponseServ.handleResponse(response);
-      List<dynamic> unitsJson = [];
-      if (data is List) unitsJson = data;
-      else if (data is Map) unitsJson = data['units'] ?? data['data'] ?? [];
 
-      final allUnits = unitsJson.map((j) => UnitModel.fromJson(j)).toList();
-
-      // Fetch reports for each unit in parallel
-      await Future.wait(allUnits.map((unit) async {
-        try {
-          final hResponse = await RequestServ.get('/api/appPitwall/admin/', {
-            "accion": "getReportesUnidad",
-            "unidad": unit.id
-          });
-          final hData = ResponseServ.handleResponse(hResponse);
-          List<dynamic> reportes = [];
-          if (hData is List) reportes = hData;
-          else if (hData is Map) reportes = hData['reportes'] ?? hData['data'] ?? hData['history'] ?? [];
-
-          for (var r in reportes) {
-            final status = (r['status_name'] ?? r['status'] ?? '').toString().toLowerCase();
-            if (status.contains('pendiente')) {
-              if( user.rol.toUpperCase() == "SUPERVISOR" && r['status'].toString().toLowerCase() == "PENDEINTE" ){
-                _pendingCitations.add({
-                  ...Map<String, dynamic>.from(r),
-                  '__unit_name': unit.name,
-                  '__unit_id': unit.id,
-                });
-              }
-              else if( user.rol.toUpperCase() == "TALLER" || r['status'].toString().toLowerCase() == "EN ESPERA" ){
-                _pendingCitations.add({
-                  ...Map<String, dynamic>.from(r),
-                  '__unit_name': unit.name,
-                  '__unit_id': unit.id,
-                });
-              }
-            }
-
-          }
-        } catch (_) {}
-      }));
-
-      // Sort by date descending
-      _pendingCitations.sort((a, b) {
-        final da = a['date_create'] ?? a['fecha'] ?? '';
-        final db = b['date_create'] ?? b['fecha'] ?? '';
-        return db.toString().compareTo(da.toString());
-      });
 
     } catch (e) {
-      if (RequestServ.modeDebug) print("[ UnitsViewModel ] Error fetching all citations: $e");
+      if (RequestServ.modeDebug) print("[ CiteValidate ] Error fetching all citations: $e");
     } finally {
       _isLoadingCitations = false;
       notifyListeners();

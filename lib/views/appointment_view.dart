@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/UserSession.dart';
+import '../services/context_app.dart';
 import '../view_models/units_view_model.dart';
 import '../models/unit_model.dart';
 import '../models/user_model.dart';
@@ -199,7 +200,7 @@ class _AppointmentViewState extends State<AppointmentView> {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserSession>(context).user;
+    final user = ContextApp().user;//Provider.of<UserSession>(context).user;
     final viewModel = Provider.of<UnitsViewModel>(context);
 
     if (user == null) return const Scaffold(body: Center(child: Text("No session")));
