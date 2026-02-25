@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pitbus_app/services/context_app.dart';
 import 'package:provider/provider.dart';
 import '../view_models/login_view_model.dart';
 import '../services/UserSession.dart';
@@ -16,10 +17,12 @@ class _LoginViewState extends State<LoginView> {
   final _usuarioController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _rememberMe = true;
+  bool _rememberMe = ContextApp().isPersist;
+
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -71,15 +74,15 @@ class _LoginViewState extends State<LoginView> {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  Text(
-                    'Sistema de Gestión de Unidades',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                  // Text(
+                  //   'Sistema de Gestión de Unidades',
+                  //   style: TextStyle(
+                  //     fontSize: 14,
+                  //     color: Colors.white.withOpacity(0.8),
+                  //     fontWeight: FontWeight.w500,
+                  //     letterSpacing: 0.5,
+                  //   ),
+                  // ),
                   const SizedBox(height: 48),
                   // Login Card
                   Container(
@@ -157,6 +160,7 @@ class _LoginViewState extends State<LoginView> {
                               onTap: () {
                                 setState(() {
                                   _rememberMe = !_rememberMe;
+                                  ContextApp().isPersist = !_rememberMe;
                                 });
                               },
                               child: Text(

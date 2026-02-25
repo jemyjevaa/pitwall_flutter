@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/UserSession.dart';
+import '../services/context_app.dart';
 import '../view_models/units_view_model.dart';
 import '../models/unit_model.dart';
 import 'appointment_view.dart';
@@ -53,7 +54,7 @@ class _UnitsViewState extends State<UnitsView> {
         ),
         actions: [
           // Show citation management button for management roles
-          if (user != null && (user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMIN' || user.rol.toUpperCase() == 'ADMINISTRADOR'))
+          if (user != null && (user.rol.toUpperCase() == 'TALLER' ||user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMIN' || user.rol.toUpperCase() == 'ADMINISTRADOR'))
             IconButton(
               icon: const Icon(Icons.pending_actions_rounded, color: Colors.white),
               tooltip: 'Gestionar Citas',
@@ -265,6 +266,7 @@ class _UnitsViewState extends State<UnitsView> {
           const Divider(),
           _buildDrawerItem(Icons.logout_rounded, "Cerrar Sesión", () {
             Provider.of<UserSession>(context, listen: false).logout();
+            ContextApp().clear();
             Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginView()), (route) => false);
           }),
           const SizedBox(height: 20),
@@ -355,7 +357,7 @@ class UnitCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      user?.rol.toUpperCase() == 'OPERADOR'? Expanded(
                         child: _buildSmallActionButton(
                           "AGENDAR CITA", 
                           Icons.calendar_today_rounded, 
@@ -371,7 +373,7 @@ class UnitCard extends StatelessWidget {
                             }
                           })
                         ),
-                      ),
+                      ):const SizedBox(width: 12),
                     ],
                   ),
                   // "Mis Citas" row — only for OPERADOR role

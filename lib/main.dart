@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pitbus_app/services/context_app.dart';
 import 'package:provider/provider.dart';
 import 'views/login_view.dart';
 import 'views/units_view.dart';
@@ -8,7 +9,11 @@ import 'view_models/units_view_model.dart';
 import 'services/UserSession.dart';
 import 'services/RequestServ.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await ContextApp().init();
+
   runApp(
     MultiProvider(
       providers: [
@@ -24,11 +29,13 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PitBus Units',
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: ContextApp().isDebugMode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF2196F3),

@@ -4,6 +4,7 @@ import '../services/RequestServ.dart';
 import '../services/ResponseServ.dart';
 import '../models/unit_model.dart';
 import '../models/user_model.dart';
+import '../models/report_model.dart';
 
 class UnitsViewModel extends ChangeNotifier {
   List<UnitModel> _units = [];
@@ -13,6 +14,7 @@ class UnitsViewModel extends ChangeNotifier {
   List<dynamic> _unitHistory = [];
   List<Map<String, dynamic>> _pendingCitations = [];
   bool _showOnlyCitations = false;
+  final requestSer = RequestServ.instance;
 
   List<UnitModel> get units {
     if (_showOnlyCitations) {
@@ -84,12 +86,22 @@ class UnitsViewModel extends ChangeNotifier {
           for (var r in reportes) {
             final status = (r['status_name'] ?? r['status'] ?? '').toString().toLowerCase();
             if (status.contains('pendiente')) {
-              _pendingCitations.add({
-                ...Map<String, dynamic>.from(r),
-                '__unit_name': unit.name,
-                '__unit_id': unit.id,
-              });
+              if( user.rol.toUpperCase() == "SUPERVISOR" && r['status'].toString().toLowerCase() == "PENDEINTE" ){
+                _pendingCitations.add({
+                  ...Map<String, dynamic>.from(r),
+                  '__unit_name': unit.name,
+                  '__unit_id': unit.id,
+                });
+              }
+              else if( user.rol.toUpperCase() == "TALLER" || r['status'].toString().toLowerCase() == "EN ESPERA" ){
+                _pendingCitations.add({
+                  ...Map<String, dynamic>.from(r),
+                  '__unit_name': unit.name,
+                  '__unit_id': unit.id,
+                });
+              }
             }
+
           }
         } catch (_) {}
       }));
@@ -158,16 +170,19 @@ class UnitsViewModel extends ChangeNotifier {
           break;
         case 'OPERADOR':
           // Operators fetch their specific unit directly via the admin endpoint
-          endpoint = '/api/appPitwall/admin/';
+          endpoint = '/api/appPitwall/operador/';
           params = {
             "accion": "getUnidades",
             "sucursal": user.sucursal,
-            "unidad": user.assignedUnit ?? "" 
+            "unidad": user.assignedUnit ?? "",
+            "operadorName": user.nombre,
+            "operadorLastName1": user.apPaterno,
+            "operadorLastName2": user.apMaterno,
           };
           break;
         case 'SUPERVISOR':
           // Supervisors get a paginated list of all units in the sucursal
-          endpoint = '/api/appPitwall/admin/';
+          endpoint = '/api/appPitwall/supervisor/';
           params = {
             "accion": "getUnidades",
             "sucursal": user.sucursal,
@@ -322,6 +337,21 @@ class UnitsViewModel extends ChangeNotifier {
       } else if (data is Map) {
         _unitHistory = data['history'] ?? data['data'] ?? [];
       }
+
+      ReportResponse? reponse = await requestSer.handlingRequestParsed(
+        urlParam: "https://nuevosistema.busmen.net/api/appPitwall/citas/",
+        method: "GET",
+        params: {
+          "action":"getReportesUnidad",
+          "id_unit": unitId
+        },
+        asJson: false,
+        fromJson: (json) => ReportResponse.fromJson(json)
+      );
+
+      print("reponse => ${reponse}");
+
+
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -335,7 +365,7 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       final String combinedReport = failureTypes.isNotEmpty 
-          ? "Tipos de falla: ${failureTypes.join(', ')}. \nDescripción: $reporteFalla"
+          ? failureTypes.join(', ')
           : reporteFalla;
 
       final body = {
@@ -351,7 +381,7 @@ class UnitsViewModel extends ChangeNotifier {
 
       final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
       ResponseServ.handleResponse(response);
-      
+      print("create => ${response.body}");
       _isLoading = false;
       notifyListeners();
       return true;
@@ -365,7 +395,7 @@ class UnitsViewModel extends ChangeNotifier {
   Future<bool> updateCitaStatus(UserModel user, int idPreOdt, int status, {String? motivo}) async {
     try {
       final body = {
-        "action": "updateStatus",
+        "action": "validate",
         "Id_pre_odt": idPreOdt,
         "status": status,
         "usuario": user.id,

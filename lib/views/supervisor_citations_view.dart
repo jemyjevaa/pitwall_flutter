@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:pitbus_app/services/ResponseServ.dart';
 import 'package:provider/provider.dart';
+import '../models/user_model.dart';
+import '../services/RequestServ.dart';
 import '../services/UserSession.dart';
 import '../view_models/units_view_model.dart';
 
@@ -15,6 +18,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   // Track validation per citation item: citationKey -> {itemIndex -> isValidated}
   // true = SI, false = NO
   final Map<String, Map<int, bool>> _itemValidations = {};
+  UserModel? _rolUser;
 
   @override
   void initState() {
@@ -24,6 +28,8 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
       if (user != null) {
         Provider.of<UnitsViewModel>(context, listen: false).fetchAllPendingCitations(user);
       }
+      // print("=> ${user?.rol}");
+      _rolUser = user;
     });
   }
 
@@ -459,7 +465,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
           ),
 
           // Items (actividades) breakdown
-          if (itemList.isNotEmpty) ...[
+          if (itemList.isNotEmpty && ( _rolUser?.rol == "SUPERVISOR)" || _rolUser?.rol == "TALLER" )) ...[
             Divider(height: 1, color: Colors.grey[100]),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -480,6 +486,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               ),
             ),
             ...List.generate(itemList.length, (index) {
+              // print("citationKey => $citationKey");
               return _buildValidationRow(citationKey, index, itemList[index]);
             }),
             const SizedBox(height: 12),
@@ -579,6 +586,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   Widget _buildValidationRow(String citationKey, int index, dynamic item) {
     final String desc = _cleanDescription(item);
     final bool? currentVal = _itemValidations[citationKey]?[index];
+    // print("item => $item");
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -624,6 +632,10 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 }
                 _itemValidations[citationKey]![index] = true;
               });
+
+              // print("=> ${_rolUser?.id}");
+              // print("item => ${item}");
+              // set function to validate
             }
           ),
           const SizedBox(width: 8),
@@ -640,6 +652,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 }
                 _itemValidations[citationKey]![index] = false;
               });
+
             }
           ),
         ],
@@ -708,4 +721,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
       ),
     );
   }
+
+
 }
