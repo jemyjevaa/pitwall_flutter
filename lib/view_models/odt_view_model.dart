@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:pitbus_app/services/context_app.dart';
 import '../models/odt_model.dart';
 import '../services/RequestServ.dart';
 
@@ -41,10 +42,7 @@ class OdtViewModel extends ChangeNotifier {
   
   Future<void> _init() async {
     await fetchFolios();
-    // Auto-select first if available
-    if (_allFolios.isNotEmpty) {
-      selectFolio(_allFolios.first);
-    }
+    // Auto-selection removed to start with an empty search bar
   }
 
   Future<void> fetchFolios() async {
@@ -52,6 +50,12 @@ class OdtViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
+
+      if( ContextApp().isDebugMode ){
+        print(" [ POST ] FETCH ODT url => https://nuevosistema.busmen.net/WS/aplicacionmovil/app_odt_job.php/");
+        print(" [ POST ] FETCH ODT params => null");
+      }
+
        final url = Uri.parse('https://nuevosistema.busmen.net/WS/aplicacionmovil/app_odt_job.php/');
        final response = await http.post(url); 
 
@@ -73,13 +77,8 @@ class OdtViewModel extends ChangeNotifier {
       if (RequestServ.modeDebug) print("Error fetching folios: $e");
       _errorMessage = "Error de conexión";
     } finally {
-      // Don't stop loading yet if we are going to auto-select, but for safety:
-      // If no folios, stop.
-      if (_allFolios.isEmpty) {
-        _isLoading = false; 
-        notifyListeners();
-      }
-      // If we have folios, _init calls selectFolio which handles its own loading state/notify.
+      _isLoading = false; 
+      notifyListeners();
     }
   }
 
@@ -90,6 +89,14 @@ class OdtViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+
+      if( ContextApp().isDebugMode ){
+        print(" [ POST ] FETCH ODT url => https://nuevosistema.busmen.net/WS/aplicacionmovil/app_odt_job.php/");
+        print(" [ POST ] FETCH ODT params => ${
+            {"folio_odt": folio}
+        }");
+      }
+
       final response = await http.post(
         Uri.parse('https://nuevosistema.busmen.net/WS/aplicacionmovil/app_odt_job.php/'),
         body: {"folio_odt": folio}
@@ -97,7 +104,8 @@ class OdtViewModel extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
+        if (RequestServ.modeDebug) print("[ FETCH ODT ] response => $data");
         // Parse services
         List<OdtService> newServices = [];
         if (data['data'] != null && data['data']['data'] != null) {
@@ -115,7 +123,7 @@ class OdtViewModel extends ChangeNotifier {
             total: _services.length,
             unfinished: _services.where((s) => !s.isFinished).length,
             finished: _services.where((s) => s.isFinished).length,
-            byFamily: {} // Simplification
+            byFamily: {} 
           );
         }
         
@@ -133,52 +141,23 @@ class OdtViewModel extends ChangeNotifier {
     }
   }
 
-  // Called when user types in search bar
   void search(String query) {
     _currentSearchTerm = query;
-    // If the query matches a folio exactly, select it? 
-    // Or just filter the CURRENT displayed services?
-    // User request: "UNA VES SELECCIONADA UNA ODT EN EL BUSCADOR"
-    // This expects the search bar to define the ODT.
-    
-    // Strategy:
-    // If query matches a known Folio, we could show a suggestion or Auto-select?
-    // Let's assume the user might want to filter the *services* of the current ODT too.
-    // Dual purpose:
-    // 1. If matches a Folio in _allFolios -> Allow switching?
-    // 2. Filter local services.
-    
-    // Simplest approach for Request:
-    // Search Bar filters the *services* (Activity/etc).
-    // To switch ODT, maybe we need a separate "Change Folio" button or the search bar *is* a Folio Selector?
-    // "UNA VES SELECCIONADA UNA ODT EN EL BUSCADOR" -> The Search Bar IS the Folio Selector.
-    
-    // Ok, so `search` should filter `_allFolios`?
-    // But if they select one, we load it.
-    // Let's implement `filterServices` for searching within the ODT (Activity).
-    // And `findFolio` for switching.
-    
-    // Compromise:
-    // `search(query)` filters the *services* (Activity).
-    // To switch ODT, we'll rely on the user using a "picker" or typing a folio that matches exactly?
-    // Let's assume `search` filters the visible content (services).
-    // The "Selection" might have been implied as "Find the folio".
     _applyFilters();
   }
   
-  // Call this to switch ODT
   void onFolioSelected(String folio) {
     selectFolio(folio);
   }
 
   void filterByFamily(String family) {
-    _selectedFamily = family; // "TODOS", "GASOLINA", "SERVICIOS"
+    _selectedFamily = family; 
     _applyFilters();
   }
 
   void _applyFilters() {
     _filteredServices = _services.where((s) {
-      final matchesQuery = s.folio.contains(_currentSearchTerm) || // In case they search folio
+      final matchesQuery = s.folio.contains(_currentSearchTerm) ||
                            s.activity.toLowerCase().contains(_currentSearchTerm.toLowerCase());
       
       final matchesFamily = _selectedFamily == "TODOS" || s.family == _selectedFamily;

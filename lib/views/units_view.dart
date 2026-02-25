@@ -265,12 +265,13 @@ class _UnitsViewState extends State<UnitsView> {
   }
 
   Widget _buildDrawer(BuildContext context, dynamic user) {
+    final textName = isOperator ? ContextApp().fullNameOperator:(user?.fullName ?? "Cargando...");
     return Drawer(
       child: Column(
         children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF1A237E)),
-            accountName: Text(user?.fullName ?? "Cargando..."),
+            accountName: Text(textName),
             accountEmail: Text(user?.rol ?? "Rol"),
             currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person, color: Color(0xFF1A237E))),
           ),
