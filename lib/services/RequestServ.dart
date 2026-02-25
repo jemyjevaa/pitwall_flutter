@@ -47,25 +47,39 @@ class RequestServ {
     });
   }
 
+  // region REQUEST PARSE
+  RequestServ._privateConstructor();
+  static final RequestServ instance = RequestServ._privateConstructor();
+
   Future<String?> handlingRequest({
     required String urlParam,
     Map<String, dynamic>? params,
     String method = "GET",
     bool asJson = false,
+    urlFull = false
   }) async {
     try {
+      // Decide base URL
+      // bool isNormUrl = urlParam == urlValidateUser ||
+      //     urlParam == urlGetRoute ||
+      //     urlParam == urlStopInRoute ||
+      //     urlParam == urlUnitAsiggned;
+
+      final base = baseUrl; //isNormUrl ? baseUrlNor : baseUrlAdm;
+      String fullUrl = urlFull? urlParam :base + urlParam;
+
       http.Response response;
-      if (modeDebug) {
-        print("[ $method ] url => $urlParam");
+      if (RequestServ.modeDebug){
+        print("[ $method ] fullUrl => $fullUrl");
         print("[ $method ] params => $params");
       }
 
-      if (method.toUpperCase() == 'GET') {
-        final uri = params != null && params.isNotEmpty
-            ? Uri.parse(urlParam).replace(queryParameters: params.map((k, v) => MapEntry(k, v.toString())))
-            : Uri.parse(urlParam);
+      // Agregar parámetros para GET en query string
+      if (method.toUpperCase() == 'GET' && params != null && params.isNotEmpty) {
+        final uri = Uri.parse(fullUrl).replace(queryParameters: params);
         response = await http.get(uri).timeout(const Duration(seconds: 10));
       } else {
+        // Construir el body según asJson o form-url-encoded
         dynamic body;
         Map<String, String>? headers;
 
@@ -79,23 +93,72 @@ class RequestServ {
           }
         }
 
-        Uri uri = Uri.parse(urlParam);
+        Uri uri = Uri.parse(fullUrl);
+
         switch (method.toUpperCase()) {
           case 'POST':
-            response = await http.post(uri, body: body, headers: headers).timeout(const Duration(seconds: 10));
+            response = await http
+                .post(uri, body: body, headers: headers)
+                .timeout(const Duration(seconds: 10));
+            break;
+          case 'PUT':
+            response = await http
+                .put(uri, body: body, headers: headers)
+                .timeout(const Duration(seconds: 10));
+            break;
+          case 'PATCH':
+            response = await http
+                .patch(uri, body: body, headers: headers)
+                .timeout(const Duration(seconds: 10));
+            break;
+          case 'DELETE':
+            response = await http
+                .delete(uri, body: body, headers: headers)
+                .timeout(const Duration(seconds: 10));
             break;
           default:
-            throw UnsupportedError("HTTP method $method no soportado en legacy");
+            throw UnsupportedError("HTTP method $method no soportado");
         }
       }
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 500) {
         return response.body;
+      } else {
+        if (RequestServ.modeDebug){
+          print("HTTP error: ${response.statusCode}");
+          print("Response body: ${response.body}");
+        }
+        return null;
       }
-      return null;
     } catch (e) {
-      if (modeDebug) print("Error en handlingRequest: $e");
+      if (RequestServ.modeDebug){
+        print("Error en handlingRequest: $e");
+      }
       return null;
     }
   }
+
+  /// Función genérica para parsear JSON a objeto
+  Future<T?> handlingRequestParsed<T>(
+      {required String urlParam,
+        Map<String, dynamic>? params,
+        String method = "GET",
+        bool asJson = false,
+        required T Function(dynamic json) fromJson, urlFull = false} ) async {
+    final responseString = await handlingRequest(
+        urlParam: urlParam, params: params, method: method, asJson: asJson, urlFull: urlFull);
+
+    if (responseString == null) return null;
+
+    try {
+      final jsonMap = jsonDecode(responseString);
+      return fromJson(jsonMap);
+    } catch (e) {
+      if (RequestServ.modeDebug){
+        print("Error en handlingRequestParsed: $e");
+      }
+      return null;
+    }
+  }
+  // endregion REQUEST PARSE
 }

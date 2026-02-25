@@ -210,6 +210,10 @@ class ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFF1A237E);
+    // GL00188452 | GL00183018
+    print("service => $service");
+
+    String parseTime = service.time.toString();
 
     return Container(
       decoration: BoxDecoration(
@@ -252,20 +256,20 @@ class ServiceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        service.activity, 
+                        service.mainMechanicName,
                         style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF1A237E))
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.tag_rounded, size: 12, color: Colors.grey[400]),
-                          const SizedBox(width: 4),
-                          Text(
-                            service.maintenanceCode, 
-                            style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w600)
-                          ),
-                        ],
-                      ),
+                      // Row(
+                      //   children: [
+                      //     Icon(Icons.tag_rounded, size: 12, color: Colors.grey[400]),
+                      //     const SizedBox(width: 4),
+                      //     Text(
+                      //       service.maintenanceCode,
+                      //       style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w600)
+                      //     ),
+                      //   ],
+                      // ),
                     ],
                   ),
                 ),
@@ -289,11 +293,13 @@ class ServiceCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             child: Column(
               children: [
-                _buildInfoRow("FAMILIA", service.family),
+                _buildInfoRow("PROGRAMADO:", service.activity),
                 const SizedBox(height: 10),
-                _buildInfoRow("TIEMPO", service.time),
+                _buildInfoRow("FAMILIA:", service.family),
                 const SizedBox(height: 10),
-                _buildInfoRow("MECÁNICO", service.mainMechanicName),
+                _buildInfoRow("DURACIÓN:", parseTime ),
+                const SizedBox(height: 10),
+                _buildInfoRow("FECHA:", service.leadTime),
               ],
             ),
           ),

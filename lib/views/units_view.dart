@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/UserSession.dart';
+import '../services/context_app.dart';
 import '../view_models/units_view_model.dart';
 import '../models/unit_model.dart';
 import 'appointment_view.dart';
@@ -19,22 +20,42 @@ class UnitsView extends StatefulWidget {
 
 class _UnitsViewState extends State<UnitsView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final user = ContextApp().user!;
+  // late final bool isAdmin = user.rol.toUpperCase() == 'ADMINISTRADOR';
+  late final bool isOperator = user.rol.toUpperCase() == 'OPERADOR' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
+  late final bool isSupervisor = user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
+  late final bool isWorkStation = user.rol.toUpperCase() == 'TALLER' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final session = Provider.of<UserSession>(context, listen: false);
-      if (session.user != null) {
-        Provider.of<UnitsViewModel>(context, listen: false).fetchUnitsByRole(session.user!);
+
+    if( ContextApp().isDebugMode ){
+      print(" [ ISLOGIN ] USER => ${ContextApp().user} | "
+          // "| idUser: ${ContextApp().idUser} "
+          // "| nameUser: ${ContextApp().nameUser} "
+          // "| rol: ${ContextApp().rol} "
+      );
+      if( ContextApp().rol == "OPERADOR" ){
+        print(" [ ISLOGIN ] OPERATOR => "
+            "| fullNameOperator: ${ContextApp().fullNameOperator} "
+            "| firstLastNameOperator: ${ContextApp().firstLastNameOperator} "
+            "| secondLastNameOperator: ${ContextApp().secondLastNameOperator} "
+            "| unitAssOperator: ${ContextApp().unitAssOperator} "
+        );
       }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // final session = Provider.of<UserSession>(context, listen: false);
+      Provider.of<UnitsViewModel>(context, listen: false).fetchUnitsByRole(ContextApp().user!);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final viewModel = Provider.of<UnitsViewModel>(context);
-    final user = Provider.of<UserSession>(context).user;
+
 
     return Scaffold(
       key: _scaffoldKey,
@@ -53,7 +74,7 @@ class _UnitsViewState extends State<UnitsView> {
         ),
         actions: [
           // Show citation management button for management roles
-          if (user != null && (user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMIN' || user.rol.toUpperCase() == 'ADMINISTRADOR'))
+          if (isSupervisor || isWorkStation)
             IconButton(
               icon: const Icon(Icons.pending_actions_rounded, color: Colors.white),
               tooltip: 'Gestionar Citas',
@@ -92,10 +113,6 @@ class _UnitsViewState extends State<UnitsView> {
   }
 
   Widget _buildHeader(dynamic user, UnitsViewModel viewModel) {
-    final bool isSupervisor = user != null && 
-        (user.rol.toUpperCase() == 'SUPERVISOR' || 
-         user.rol.toUpperCase() == 'ADMIN' || 
-         user.rol.toUpperCase() == 'ADMINISTRADOR');
 
     return Container(
       width: double.infinity,
@@ -122,13 +139,15 @@ class _UnitsViewState extends State<UnitsView> {
                       style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                     Text(
-                      user?.fullName ?? "Usuario",
+                      ContextApp().rol == "OPERADOR"?
+                      ContextApp().fullNameOperator:
+                      (user?.fullName ?? "Usuario"),
                       style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1.1),
                     ),
                   ],
                 ),
               ),
-              if (isSupervisor)
+              if (isWorkStation)
                 _buildFilterToggle(viewModel),
             ],
           ),
@@ -246,12 +265,13 @@ class _UnitsViewState extends State<UnitsView> {
   }
 
   Widget _buildDrawer(BuildContext context, dynamic user) {
+    final textName = isOperator ? ContextApp().fullNameOperator:(user?.fullName ?? "Cargando...");
     return Drawer(
       child: Column(
         children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF1A237E)),
-            accountName: Text(user?.fullName ?? "Cargando..."),
+            accountName: Text(textName),
             accountEmail: Text(user?.rol ?? "Rol"),
             currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person, color: Color(0xFF1A237E))),
           ),
@@ -265,6 +285,7 @@ class _UnitsViewState extends State<UnitsView> {
           const Divider(),
           _buildDrawerItem(Icons.logout_rounded, "Cerrar Sesión", () {
             Provider.of<UserSession>(context, listen: false).logout();
+            ContextApp().clear();
             Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginView()), (route) => false);
           }),
           const SizedBox(height: 20),
@@ -286,9 +307,14 @@ class UnitCard extends StatelessWidget {
   final UnitModel unit;
   const UnitCard({super.key, required this.unit});
 
+
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserSession>(context).user;
+
+    final user = ContextApp().user!;
+
+    late final bool isOperator = user.rol.toUpperCase() == 'OPERADOR' || user.rol.toUpperCase() == 'ADMINISTRADOR' || user.rol.toUpperCase() == 'ADMIN';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -355,7 +381,7 @@ class UnitCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      isOperator? Expanded(
                         child: _buildSmallActionButton(
                           "AGENDAR CITA", 
                           Icons.calendar_today_rounded, 
@@ -371,22 +397,22 @@ class UnitCard extends StatelessWidget {
                             }
                           })
                         ),
-                      ),
+                      ):const SizedBox(width: 12),
                     ],
                   ),
                   // "Mis Citas" row — only for OPERADOR role
-                  if ((user?.rol.toUpperCase() ?? '') == 'OPERADOR') ...[  
-                    const SizedBox(height: 12),
-                    _buildSmallActionButton(
-                      "MIS CITAS",
-                      Icons.pending_actions_rounded,
-                      Colors.teal,
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => OperatorCitationsView(unit: unit)),
-                      ),
-                    ),
-                  ],
+                  // if ((user?.rol.toUpperCase() ?? '') == 'OPERADOR') ...[
+                  //   const SizedBox(height: 12),
+                  //   _buildSmallActionButton(
+                  //     "MIS CITAS",
+                  //     Icons.pending_actions_rounded,
+                  //     Colors.teal,
+                  //     () => Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(builder: (context) => OperatorCitationsView(unit: unit)),
+                  //     ),
+                  //   ),
+                  // ],
                 ],
               ),
             ),

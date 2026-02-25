@@ -36,6 +36,7 @@ class UserSession extends ChangeNotifier {
     }
   }
 
+
   void setUser(UserModel newUser, {bool persist = true}) async {
     _user = newUser;
     if (persist) {

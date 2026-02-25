@@ -1,3 +1,27 @@
+//{"success":true,"data":{"id":"155","id_usuario":"rigozodac","nombre":"Rigoberto","ap_paterno":"Lopez","ap_materno":"Avila","sucursal":"1","rol":"administrador"}}
+//{"success":false,"error":"Error, credenciales incorrectas"}
+
+class ResponseLogin {
+  final bool success;
+  final UserModel? user;
+  final String? error;
+
+  ResponseLogin({
+    required this.success,
+    this.user,
+    this.error,
+  });
+
+  factory ResponseLogin.fromJson(Map<String, dynamic> json) {
+    return ResponseLogin(
+      success: json['success'] ?? false,
+      user: json['data'] != null ? UserModel.fromJson(json['data']) : null,
+      error: json['error']
+    );
+  }
+
+}
+
 class UserModel {
   final String id;
   final String idUsuario;

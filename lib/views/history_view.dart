@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/unit_model.dart';
+import '../models/report_model.dart';
 import '../services/UserSession.dart';
+import '../services/context_app.dart';
 import '../view_models/units_view_model.dart';
 
 class HistoryView extends StatefulWidget {
@@ -18,7 +20,7 @@ class _HistoryViewState extends State<HistoryView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<UserSession>(context, listen: false).user;
+      final user = ContextApp().user;
       if (user != null) {
         Provider.of<UnitsViewModel>(context, listen: false).fetchUnitHistory(user, widget.unit.id);
       }
@@ -88,27 +90,21 @@ class _HistoryViewState extends State<HistoryView> {
   }
 
   /// Resolves the best available description from a history record.
-  String _resolveDescription(dynamic item) {
-    final concepto = item['concepto']?.toString();
-    if (concepto != null && concepto.isNotEmpty) return concepto;
-    final reporte = item['reporte_falla']?.toString();
-    if (reporte != null && reporte.isNotEmpty) return reporte;
-    final act = item['actividades'];
-    if (act is List && act.isNotEmpty) {
-      return act.map((a) => a['descripcion']?.toString() ?? a.toString()).join(', ');
+  String _resolveDescription(ReportModel item) {
+    if (item.actividades.isNotEmpty) return item.actividades;
+    if (item.detalle.isNotEmpty) {
+      return item.detalle.map((d) => d.descripcion).join(', ');
     }
-    if (act is String && act.isNotEmpty) return act;
     return 'Sin descripción';
   }
 
-  Widget _buildHistoryCard(dynamic item) {
-    final String folio = item['folio']?.toString() ?? item['Id_pre_odt']?.toString() ?? 'N/A';
-    final String date = item['fecha']?.toString() ?? item['fecha_registro']?.toString() ?? item['date_create']?.toString() ?? 'N/A';
-    // Use actividades as fallback if concepto/reporte_falla is empty (per API docs)
+  Widget _buildHistoryCard(ReportModel item) {
+    final String folio = item.folioOdt != null ? "FOLIO: ${item.folioOdt}":"Cita: ${item.id}";
+    final String date = item.dateCreate;
     final String concepto = _resolveDescription(item);
-    final String mecanico = item['mecanico']?.toString() ?? item['usuarioName']?.toString() ?? 'Taller Central';
-    final String status = (item['status_name'] ?? item['status'] ?? 'Pendiente').toString();
-    final int? idPreOdt = int.tryParse((item['Id_pre_odt'] ?? item['id_pre_odt'] ?? '0').toString());
+    final String mecanico = item.mecanico ?? item.userCreated;
+    final String status = item.status;
+    final int? idPreOdt = int.tryParse(item.id);
 
     final bool isPending = status.toLowerCase().contains('pendiente');
 
@@ -132,7 +128,7 @@ class _HistoryViewState extends State<HistoryView> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(color: const Color(0xFF1A237E).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                 child: Text(
-                  "FOLIO: $folio",
+                  folio,
                   style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFF1A237E)),
                 ),
               ),

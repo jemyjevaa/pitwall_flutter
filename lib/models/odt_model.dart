@@ -8,6 +8,7 @@ class OdtService {
   final String time; // tiempo
   final List<String> parts; // refacciones
   final String mainMechanicName; // mecanicoName
+  final String leadTime;
   final bool isFinished; // termino_servicio != "SIN TERMINAR"
   final String statusLabel; // "SIN TERMINAR" or others
 
@@ -21,22 +22,58 @@ class OdtService {
     required this.time,
     required this.parts,
     required this.mainMechanicName,
+    required this.leadTime,
     required this.isFinished,
     required this.statusLabel,
   });
 
+  static String formatMinutes(String? minutes) {
+    if (minutes == null || minutes.isEmpty) return "0 min";
+    final int totalMinutes = int.tryParse(minutes) ?? 0;
+    
+    if (totalMinutes < 60) {
+      return "$totalMinutes min";
+    }
+    
+    final int hours = totalMinutes ~/ 60;
+    final int remainingMinutes = totalMinutes % 60;
+    
+    if (remainingMinutes == 0) {
+      return "$hours ${hours == 1 ? 'hr' : 'hrs'}";
+    }
+
+    return "${hours.toString().padLeft(2, '0')}:${remainingMinutes.toString().padLeft(2, '0')} hrs";
+  }
+
+  static String formatDate(String dateStr) {
+    if (dateStr == 'N/A' || dateStr.isEmpty) return dateStr;
+    try {
+      // Input: yyyy-mm-dd
+      final parts = dateStr.split('-');
+      if (parts.length == 3) {
+        return "${parts[2]}/${parts[1]}/${parts[0]}"; // Output: dd/mm/yyyy
+      }
+    } catch (_) {}
+    return dateStr;
+  }
+
   factory OdtService.fromJson(Map<String, dynamic> json) {
     // Determine mechanic photo
-    // API returns: "..\/inspeccion\/rw\/images\/operadores\/18778\/18778.jpg"
-    // We want: "https://nuevosistema.busmen.net/inspeccion/rw/images/operadores/18778/18778.jpg"
     final String rawImg = json['imagen_mecanico']?.toString() ?? '';
     String photoUrl = "https://i.pravatar.cc/150"; // Fallback
     
     if (rawImg.isNotEmpty) {
-       // Clean path: remove ".." and ensure domain
        String cleanPath = rawImg.replaceAll(r'..', '');
        if (!cleanPath.startsWith('/')) cleanPath = '/$cleanPath';
        photoUrl = "https://nuevosistema.busmen.net$cleanPath";
+    }
+
+    final String rawTime = json['tiempo']?.toString() ?? '0';
+    
+    // Clean leadTime: if it's a list or comma-separated string, take the first item
+    String rawLeadTime = json["fechas_entrega"]?.toString() ?? 'N/A';
+    if (rawLeadTime.contains(',')) {
+      rawLeadTime = rawLeadTime.split(',').first.trim();
     }
 
     return OdtService(
@@ -46,7 +83,8 @@ class OdtService {
       activity: json['concepto']?.toString() ?? 'Sin Actividad',
       maintenanceCode: json['codigo_mtto']?.toString() ?? 'N/A',
       family: json['familia']?.toString() ?? 'SERVICIOS',
-      time: "${json['tiempo']?.toString() ?? '0'} min", 
+      time: formatMinutes(rawTime),
+      leadTime: formatDate(rawLeadTime),
       parts: (json['refacciones']?.toString() ?? '').split(',').where((e) => e.isNotEmpty && e.trim() != '').toList(),
       mainMechanicName: json['mecanicoName']?.toString() ?? 'N/A',
       statusLabel: json['termino_servicio']?.toString() ?? 'SIN TERMINAR',
@@ -84,7 +122,6 @@ class OdtSummary {
     );
   }
   
-  // Empty state
   factory OdtSummary.empty() {
     return OdtSummary(total: 0, unfinished: 0, finished: 0, byFamily: {});
   }

@@ -1,18 +1,22 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:pitbus_app/services/context_app.dart';
+import '../models/history_model.dart';
 import '../services/RequestServ.dart';
 import '../services/ResponseServ.dart';
 import '../models/unit_model.dart';
 import '../models/user_model.dart';
+import '../models/report_model.dart';
 
 class UnitsViewModel extends ChangeNotifier {
   List<UnitModel> _units = [];
   bool _isLoading = false;
   bool _isLoadingCitations = false;
   String? _errorMessage;
-  List<dynamic> _unitHistory = [];
+  List<ReportModel> _unitHistory = [];
   List<Map<String, dynamic>> _pendingCitations = [];
   bool _showOnlyCitations = false;
+  final requestSer = RequestServ.instance;
 
   List<UnitModel> get units {
     if (_showOnlyCitations) {
@@ -22,7 +26,7 @@ class UnitsViewModel extends ChangeNotifier {
   }
   
   bool get showOnlyCitations => _showOnlyCitations;
-  List<dynamic> get unitHistory => _unitHistory;
+  List<ReportModel> get unitHistory => _unitHistory;
   List<Map<String, dynamic>> get pendingCitations => _pendingCitations;
   bool get isLoading => _isLoading;
   bool get isLoadingCitations => _isLoadingCitations;
@@ -56,53 +60,10 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // First get all units in sucursal
-      final response = await RequestServ.get('/api/appPitwall/admin/', {
-        "accion": "getUnidades",
-        "sucursal": user.sucursal,
-        "page": 1
-      });
-      final data = ResponseServ.handleResponse(response);
-      List<dynamic> unitsJson = [];
-      if (data is List) unitsJson = data;
-      else if (data is Map) unitsJson = data['units'] ?? data['data'] ?? [];
 
-      final allUnits = unitsJson.map((j) => UnitModel.fromJson(j)).toList();
-
-      // Fetch reports for each unit in parallel
-      await Future.wait(allUnits.map((unit) async {
-        try {
-          final hResponse = await RequestServ.get('/api/appPitwall/admin/', {
-            "accion": "getReportesUnidad",
-            "unidad": unit.id
-          });
-          final hData = ResponseServ.handleResponse(hResponse);
-          List<dynamic> reportes = [];
-          if (hData is List) reportes = hData;
-          else if (hData is Map) reportes = hData['reportes'] ?? hData['data'] ?? hData['history'] ?? [];
-
-          for (var r in reportes) {
-            final status = (r['status_name'] ?? r['status'] ?? '').toString().toLowerCase();
-            if (status.contains('pendiente')) {
-              _pendingCitations.add({
-                ...Map<String, dynamic>.from(r),
-                '__unit_name': unit.name,
-                '__unit_id': unit.id,
-              });
-            }
-          }
-        } catch (_) {}
-      }));
-
-      // Sort by date descending
-      _pendingCitations.sort((a, b) {
-        final da = a['date_create'] ?? a['fecha'] ?? '';
-        final db = b['date_create'] ?? b['fecha'] ?? '';
-        return db.toString().compareTo(da.toString());
-      });
 
     } catch (e) {
-      if (RequestServ.modeDebug) print("[ UnitsViewModel ] Error fetching all citations: $e");
+      if (RequestServ.modeDebug) print("[ CiteValidate ] Error fetching all citations: $e");
     } finally {
       _isLoadingCitations = false;
       notifyListeners();
@@ -158,16 +119,19 @@ class UnitsViewModel extends ChangeNotifier {
           break;
         case 'OPERADOR':
           // Operators fetch their specific unit directly via the admin endpoint
-          endpoint = '/api/appPitwall/admin/';
+          endpoint = '/api/appPitwall/operador/';
           params = {
             "accion": "getUnidades",
             "sucursal": user.sucursal,
-            "unidad": user.assignedUnit ?? "" 
+            "unidad": ContextApp().unitAssOperator,
+            "operadorName": ContextApp().fullNameOperator,
+            "operadorLastName1": ContextApp().firstLastNameOperator,
+            "operadorLastName2": ContextApp().secondLastNameOperator,
           };
           break;
         case 'SUPERVISOR':
           // Supervisors get a paginated list of all units in the sucursal
-          endpoint = '/api/appPitwall/admin/';
+          endpoint = '/api/appPitwall/supervisor/';
           params = {
             "accion": "getUnidades",
             "sucursal": user.sucursal,
@@ -295,33 +259,58 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String endpoint = '';
-      Map<String, dynamic> params = {};
+      // String endpoint = '';
+      // Map<String, dynamic> params = {};
+      //
+      // final role = user.rol.toUpperCase();
+      // if (role == 'ADMIN' || role == 'ADMINISTRADOR' || role == 'SUPERVISOR') {
+      //   endpoint = '/api/appPitwall/admin/';
+      //   params = {"accion": "getReportesUnidad", "unidad": unitId};
+      // } else if (role == 'TALLER') {
+      //   endpoint = '/api/appPitwall/taller/';
+      //   params = {"accion": "getReportesUnidad", "unidad": unitId};
+      // } else {
+      //   endpoint = '/api/appPitwall/operador/';
+      //   params = {
+      //     "accion": "getReportesUnidad",
+      //     "operadorName": user.fullName,
+      //     "unidad": unitId
+      //   };
+      // }
+      //
+      // final response = await RequestServ.get(endpoint, params);
+      // final data = ResponseServ.handleResponse(response);
+      //
+      // if (data is List) {
+      //   _unitHistory = data;
+      // } else if (data is Map) {
+      //   _unitHistory = data['history'] ?? data['data'] ?? [];
+      // }
 
-      final role = user.rol.toUpperCase();
-      if (role == 'ADMIN' || role == 'ADMINISTRADOR' || role == 'SUPERVISOR') {
-        endpoint = '/api/appPitwall/admin/';
-        params = {"accion": "getReportesUnidad", "unidad": unitId};
-      } else if (role == 'TALLER') {
-        endpoint = '/api/appPitwall/taller/';
-        params = {"accion": "getReportesUnidad", "unidad": unitId};
-      } else {
-        endpoint = '/api/appPitwall/operador/';
-        params = {
-          "accion": "getReportesUnidad", 
-          "operadorName": user.fullName,
-          "unidad": unitId
-        };
+      ReportResponse? reponse = await requestSer.handlingRequestParsed(
+        urlParam: "/api/appPitwall/citas/",
+        method: "GET",
+        params: {
+          "action":"getReportesUnidad",
+          "id_unit": unitId
+        },
+        asJson: false,
+        fromJson: (json) {
+          print(json);
+          return ReportResponse.fromJson(json);
+        }
+      );
+
+      if (reponse?.status != 200){
+        if( ContextApp().isDebugMode ){
+          print("[ unitCiteHistory ] => ${reponse?.status}");
+        }
+        return;
       }
 
-      final response = await RequestServ.get(endpoint, params);
-      final data = ResponseServ.handleResponse(response);
-      
-      if (data is List) {
-        _unitHistory = data;
-      } else if (data is Map) {
-        _unitHistory = data['history'] ?? data['data'] ?? [];
-      }
+      _unitHistory = reponse!.reportes;
+
+
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -335,7 +324,7 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       final String combinedReport = failureTypes.isNotEmpty 
-          ? "Tipos de falla: ${failureTypes.join(', ')}. \nDescripción: $reporteFalla"
+          ? failureTypes.join(', ')
           : reporteFalla;
 
       final body = {
@@ -351,7 +340,7 @@ class UnitsViewModel extends ChangeNotifier {
 
       final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
       ResponseServ.handleResponse(response);
-      
+      print("create => ${response.body}");
       _isLoading = false;
       notifyListeners();
       return true;
@@ -365,7 +354,7 @@ class UnitsViewModel extends ChangeNotifier {
   Future<bool> updateCitaStatus(UserModel user, int idPreOdt, int status, {String? motivo}) async {
     try {
       final body = {
-        "action": "updateStatus",
+        "action": "validate",
         "Id_pre_odt": idPreOdt,
         "status": status,
         "usuario": user.id,
