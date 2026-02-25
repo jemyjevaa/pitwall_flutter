@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:pitbus_app/services/context_app.dart';
+import '../models/history_model.dart';
 import '../services/RequestServ.dart';
 import '../services/ResponseServ.dart';
 import '../models/unit_model.dart';
@@ -12,7 +13,7 @@ class UnitsViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool _isLoadingCitations = false;
   String? _errorMessage;
-  List<dynamic> _unitHistory = [];
+  List<ReportModel> _unitHistory = [];
   List<Map<String, dynamic>> _pendingCitations = [];
   bool _showOnlyCitations = false;
   final requestSer = RequestServ.instance;
@@ -25,7 +26,7 @@ class UnitsViewModel extends ChangeNotifier {
   }
   
   bool get showOnlyCitations => _showOnlyCitations;
-  List<dynamic> get unitHistory => _unitHistory;
+  List<ReportModel> get unitHistory => _unitHistory;
   List<Map<String, dynamic>> get pendingCitations => _pendingCitations;
   bool get isLoading => _isLoading;
   bool get isLoadingCitations => _isLoadingCitations;
@@ -311,46 +312,56 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String endpoint = '';
-      Map<String, dynamic> params = {};
-
-      final role = user.rol.toUpperCase();
-      if (role == 'ADMIN' || role == 'ADMINISTRADOR' || role == 'SUPERVISOR') {
-        endpoint = '/api/appPitwall/admin/';
-        params = {"accion": "getReportesUnidad", "unidad": unitId};
-      } else if (role == 'TALLER') {
-        endpoint = '/api/appPitwall/taller/';
-        params = {"accion": "getReportesUnidad", "unidad": unitId};
-      } else {
-        endpoint = '/api/appPitwall/operador/';
-        params = {
-          "accion": "getReportesUnidad", 
-          "operadorName": user.fullName,
-          "unidad": unitId
-        };
-      }
-
-      final response = await RequestServ.get(endpoint, params);
-      final data = ResponseServ.handleResponse(response);
-      
-      if (data is List) {
-        _unitHistory = data;
-      } else if (data is Map) {
-        _unitHistory = data['history'] ?? data['data'] ?? [];
-      }
+      // String endpoint = '';
+      // Map<String, dynamic> params = {};
+      //
+      // final role = user.rol.toUpperCase();
+      // if (role == 'ADMIN' || role == 'ADMINISTRADOR' || role == 'SUPERVISOR') {
+      //   endpoint = '/api/appPitwall/admin/';
+      //   params = {"accion": "getReportesUnidad", "unidad": unitId};
+      // } else if (role == 'TALLER') {
+      //   endpoint = '/api/appPitwall/taller/';
+      //   params = {"accion": "getReportesUnidad", "unidad": unitId};
+      // } else {
+      //   endpoint = '/api/appPitwall/operador/';
+      //   params = {
+      //     "accion": "getReportesUnidad",
+      //     "operadorName": user.fullName,
+      //     "unidad": unitId
+      //   };
+      // }
+      //
+      // final response = await RequestServ.get(endpoint, params);
+      // final data = ResponseServ.handleResponse(response);
+      //
+      // if (data is List) {
+      //   _unitHistory = data;
+      // } else if (data is Map) {
+      //   _unitHistory = data['history'] ?? data['data'] ?? [];
+      // }
 
       ReportResponse? reponse = await requestSer.handlingRequestParsed(
-        urlParam: "https://nuevosistema.busmen.net/api/appPitwall/citas/",
+        urlParam: "/api/appPitwall/citas/",
         method: "GET",
         params: {
           "action":"getReportesUnidad",
           "id_unit": unitId
         },
         asJson: false,
-        fromJson: (json) => ReportResponse.fromJson(json)
+        fromJson: (json) {
+          print(json);
+          return ReportResponse.fromJson(json);
+        }
       );
 
-      print("reponse => ${reponse}");
+      if (reponse?.status != 200){
+        if( ContextApp().isDebugMode ){
+          print("[ unitCiteHistory ] => ${reponse?.status}");
+        }
+        return;
+      }
+
+      _unitHistory = reponse!.reportes;
 
 
     } catch (e) {

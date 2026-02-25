@@ -111,6 +111,38 @@ class ReportModel {
           [],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'id_unidad': idUnidad,
+      'id_operador': idOperador,
+      'report': report,
+      'date_request': dateRequest,
+      'date_create': dateCreate,
+      'hora_asignada': horaAsignada,
+      'urgency': urgency,
+      'img_1': img1,
+      'img_2': img2,
+      'img_3': img3,
+      'Taller': taller,
+      'Nave': nave,
+      'mecanico': mecanico,
+      'nota': nota,
+      'actividades': actividades,
+      'status': status,
+      'activo': activo,
+      'user_created': userCreated,
+      'user_cancel': userCancel,
+      'folio_odt': folioOdt,
+      'sucursal': sucursal,
+      'validadoGPS': validadoGps,
+      'horaGPS': horaGps,
+      'urgencia': urgencia,
+      'sub_urgencia': subUrgencia,
+      'detalle': detalle.map((e) => e.toJson()).toList(),
+    };
+  }
 }
 
 class ReportDetailModel {
@@ -136,5 +168,15 @@ class ReportDetailModel {
       usuarioValida: json['usuario_valida']?.toString(),
       fechaValidacion: json['fecha_validacion']?.toString() ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'descripcion': descripcion,
+      'status': status,
+      'usuario_registro': usuarioRegistro,
+      'usuario_valida': usuarioValida,
+      'fecha_validacion': fechaValidacion,
+    };
   }
 }

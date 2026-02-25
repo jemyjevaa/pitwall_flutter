@@ -376,7 +376,7 @@ class UnitCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      user?.rol.toUpperCase() == 'OPERADOR'? Expanded(
+                      ContextApp().rol == 'OPERADOR'? Expanded(
                         child: _buildSmallActionButton(
                           "AGENDAR CITA", 
                           Icons.calendar_today_rounded, 
