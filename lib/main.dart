@@ -21,7 +21,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => UserSession()),
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
         ChangeNotifierProvider(create: (_) => UnitsViewModel()),
-        ChangeNotifierProvider(create: (_) => FormOperatorViewModel()), // Agregado aquí
+        ChangeNotifierProvider(create: (_) => FormOperatorViewModel()),
       ],
       child: const MyApp(),
     ),
@@ -30,8 +30,6 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -53,11 +51,16 @@ class MyApp extends StatelessWidget {
             return const LoginView();
           }
           
-          // final user = userSession.user;
-          // // If operator hasn't filled manual data (assignedUnit is missing), send to collection view
-          // if (user?.rol == 'OPERADOR' && (user?.assignedUnit == null || user!.assignedUnit!.isEmpty)) {
-          //   return const OperatorDataView();
-          // }
+          final user = userSession.user ?? ContextApp().user;
+          
+          if (user == null) {
+            return const LoginView();
+          }
+
+          // If operator hasn't filled manual data (assignedUnit is missing), send to collection view
+          if (user.rol == 'OPERADOR' && (user.assignedUnit == null || user.assignedUnit!.isEmpty)) {
+            return const OperatorDataView();
+          }
           
           return const UnitsView();
         },

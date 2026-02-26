@@ -139,16 +139,16 @@ class _UnitsViewState extends State<UnitsView> {
                       style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                     Text(
-                      ContextApp().rol == "OPERADOR"?
-                      ContextApp().fullNameOperator:
-                      (user?.fullName ?? "Usuario"),
+                      (ContextApp().rol == "OPERADOR"
+                          ? ContextApp().fullNameOperator
+                          : user?.fullName) ?? "Usuario",
                       style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1.1),
                     ),
                   ],
                 ),
               ),
-              if (isWorkStation)
-                _buildFilterToggle(viewModel),
+              // if (isWorkStation)
+              //   _buildFilterToggle(viewModel),
             ],
           ),
           const SizedBox(height: 16),
@@ -265,7 +265,7 @@ class _UnitsViewState extends State<UnitsView> {
   }
 
   Widget _buildDrawer(BuildContext context, dynamic user) {
-    final textName = isOperator ? ContextApp().fullNameOperator:(user?.fullName ?? "Cargando...");
+    final textName = (isOperator ? ContextApp().fullNameOperator : user?.fullName) ?? "Cargando...";
     return Drawer(
       child: Column(
         children: [

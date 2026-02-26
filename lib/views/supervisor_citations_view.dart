@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:pitbus_app/services/ResponseServ.dart';
 import 'package:provider/provider.dart';
+import '../models/appointment_model.dart';
 import '../models/user_model.dart';
-import '../services/RequestServ.dart';
 import '../services/UserSession.dart';
+import '../services/context_app.dart';
 import '../view_models/units_view_model.dart';
 
 class SupervisorCitationsView extends StatefulWidget {
@@ -24,17 +24,18 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<UserSession>(context, listen: false).user;
+      final user = ContextApp().user;
       if (user != null) {
         Provider.of<UnitsViewModel>(context, listen: false).fetchAllPendingCitations(user);
       }
-      // print("=> ${user?.rol}");
-      _rolUser = user;
+      setState(() {
+        _rolUser = user;
+      });
     });
   }
 
-  String _getCitationKey(Map<String, dynamic> citation) {
-    return (citation['folio'] ?? citation['id_pre_odt'] ?? citation['Id_pre_odt'] ?? citation['id'] ?? 'raw').toString();
+  String _getCitationKey(AppointmentModel citation) {
+    return citation.id;
   }
 
   List<dynamic> _parseActivities(dynamic activities) {
@@ -55,10 +56,10 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
 
   // ──────────────────────────── ACTIONS ──────────────────────────────────────
 
-  Future<void> _approve(BuildContext ctx, Map<String, dynamic> citation) async {
-    final user = Provider.of<UserSession>(ctx, listen: false).user;
+  Future<void> _approve(BuildContext ctx, AppointmentModel citation) async {
+    final user = ContextApp().user; //Provider.of<UserSession>(ctx, listen: false).user;
     if (user == null) return;
-    final idPreOdt = int.tryParse((citation['Id_pre_odt'] ?? citation['id_pre_odt'] ?? '0').toString());
+    final idPreOdt = int.tryParse(citation.id);
     if (idPreOdt == null || idPreOdt == 0) return;
 
     final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
@@ -72,7 +73,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     if (ok) vm.fetchAllPendingCitations(user);
   }
 
-  void _showRejectionModal(BuildContext ctx, Map<String, dynamic> citation) {
+  void _showRejectionModal(BuildContext ctx, AppointmentModel citation) {
     final controller = TextEditingController();
     showModalBottomSheet(
       context: ctx,
@@ -115,7 +116,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Unidad: ${citation['__unit_name'] ?? 'N/A'}',
+                'Unidad ID: ${citation.unitId}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 20),
@@ -181,10 +182,10 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     );
   }
 
-  Future<void> _reject(BuildContext ctx, Map<String, dynamic> citation, String motivo) async {
+  Future<void> _reject(BuildContext ctx, AppointmentModel citation, String motivo) async {
     final user = Provider.of<UserSession>(ctx, listen: false).user;
     if (user == null) return;
-    final idPreOdt = int.tryParse((citation['Id_pre_odt'] ?? citation['id_pre_odt'] ?? '0').toString());
+    final idPreOdt = int.tryParse(citation.id);
     if (idPreOdt == null || idPreOdt == 0) return;
 
     final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
@@ -232,7 +233,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               onPressed: vm.isLoadingCitations
                   ? null
                   : () {
-                      final user = Provider.of<UserSession>(context, listen: false).user;
+                      final user = ContextApp().user;
                       if (user != null) vm.fetchAllPendingCitations(user);
                     },
             ),
@@ -323,45 +324,27 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     );
   }
 
-  Widget _buildCitationCard(BuildContext ctx, Map<String, dynamic> citation) {
-    final unitName = citation['__unit_name']?.toString() ?? 'N/A';
-    final folio = citation['folio']?.toString() ??
-        citation['Id_pre_odt']?.toString() ??
-        citation['id_pre_odt']?.toString() ??
-        'N/A';
-    final date = citation['date_create']?.toString() ??
-        citation['fecha']?.toString() ??
-        citation['fecha_registro']?.toString() ??
-        'N/A';
-    final operador = citation['usuarioName']?.toString() ??
-        citation['operador']?.toString() ??
-        citation['nombre_operador']?.toString() ??
-        'Operador';
+  Widget _buildCitationCard(BuildContext ctx, AppointmentModel citation) {
+    final List<dynamic> itemList = _parseActivities(citation.activities);
+    final String citationKey = _getCitationKey(citation);
+    
+    // Check if all items are validated (if there are any)
+    bool allValidated = true;
+    bool anyRejected = false;
+    bool allApproved = true;
 
-    // Description: prefer reporte_falla, fall back to actividades
-    final detalle = citation['reporte_falla']?.toString();
-    final actividades = citation['actividades'];
-    String descripcion = 'Sin descripción';
-    if (detalle != null && detalle.isNotEmpty) {
-      descripcion = detalle;
-    } else if (actividades != null) {
-      if (actividades is List && actividades.isNotEmpty) {
-        descripcion = actividades
-            .map((a) => a['descripcion']?.toString() ?? a.toString())
-            .join(', ');
-      } else if (actividades is String && actividades.isNotEmpty) {
-        descripcion = actividades;
+    if (itemList.isNotEmpty) {
+      for (int i = 0; i < itemList.length; i++) {
+        final val = _itemValidations[citationKey]?[i];
+        if (val == null) {
+          allValidated = false;
+          allApproved = false;
+        } else if (val == false) {
+          anyRejected = true;
+          allApproved = false;
+        }
       }
     }
-
-    final List<dynamic> itemList = _parseActivities(citation['actividades']);
-    final String citationKey = _getCitationKey(citation);
-    final validations = _itemValidations[citationKey] ?? {};
-
-    // Check if all items are validated and all are SI
-    final bool allValidated = itemList.isEmpty || (validations.length == itemList.length);
-    final bool allApproved = itemList.isEmpty || (allValidated && validations.values.every((v) => v == true));
-    final bool anyRejected = validations.values.any((v) => v == false);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -402,7 +385,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         children: [
                           const Icon(Icons.directions_bus_rounded, size: 14, color: Colors.white),
                           const SizedBox(width: 6),
-                          Text(unitName,
+                          Text(citation.unitId,
                               style: const TextStyle(
                                   fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
                         ],
@@ -418,7 +401,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         border: Border.all(color: anyRejected ? Colors.red.withOpacity(0.3) : Colors.orange.withOpacity(0.3)),
                       ),
                       child: Text(
-                        anyRejected ? 'RECHAZO REQUERIDO' : 'PENDIENTE VALIDACIÓN',
+                        itemList.isEmpty ? 'SIN FALLAS' : 'CON FALLAS',
                         style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: anyRejected ? Colors.red : Colors.orange),
                       ),
                     ),
@@ -430,19 +413,24 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                   children: [
                     Icon(Icons.receipt_long_rounded, size: 14, color: Colors.grey[400]),
                     const SizedBox(width: 6),
-                    Text('Folio: $folio',
+                    Text('Folio cita: ${citation.id}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey[400]),
                     const SizedBox(width: 4),
-                    Text(date,
+                    Text(citation.dateRequest ?? citation.dateCreate,
                         style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                   ],
                 ),
                 const SizedBox(height: 12),
                 // Description
                 Text(
-                  descripcion,
+                  "report: ${citation.report}",
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "activities :${citation.activities}",
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
                 const SizedBox(height: 10),
@@ -453,7 +441,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        operador,
+                        'Operador ID: ${citation.operatorId}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -465,7 +453,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
           ),
 
           // Items (actividades) breakdown
-          if (itemList.isNotEmpty && ( _rolUser?.rol == "SUPERVISOR)" || _rolUser?.rol == "TALLER" )) ...[
+          if (itemList.isNotEmpty && (_rolUser?.rol.toUpperCase() == "SUPERVISOR" || _rolUser?.rol.toUpperCase() == "TALLER")) ...[
             Divider(height: 1, color: Colors.grey[100]),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -473,7 +461,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 children: [
                   Text(
                     'VALIDAR FALLAS (${itemList.length})',
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF1A237E), letterSpacing: 1),
                   ),
                   const Spacer(),
@@ -486,7 +474,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               ),
             ),
             ...List.generate(itemList.length, (index) {
-              // print("citationKey => $citationKey");
               return _buildValidationRow(citationKey, index, itemList[index]);
             }),
             const SizedBox(height: 12),
@@ -528,7 +515,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                       'APROBAR',
                       Icons.check_circle_rounded,
                       Colors.green,
-                      allApproved ? () => _approve(ctx, citation) : null,
+                      !allApproved ? () => _approve(ctx, citation) : null,
                     ),
                   ),
                 ),
@@ -553,27 +540,20 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     if (item == null) return 'Sin descripción';
     
     if (item is Map) {
-      // Try common keys
       final val = item['descripcion'] ?? item['description'] ?? item['name'] ?? item['value'] ?? item['text'];
       if (val != null) return val.toString();
-      // If no known key, but has values, return the first valid string value
       for (var v in item.values) {
         if (v is String && v.isNotEmpty) return v;
       }
     }
     
     String s = item.toString().trim();
-    // Helper to remove surrounding braces/brackets if present
     if (s.startsWith('{') && s.endsWith('}')) s = s.substring(1, s.length - 1);
     
-    // If it looks like "key: value", try to extract value
-    // Only if it contains "descripcion" or similar common keys to avoid stripping legitimate text
     if (s.toLowerCase().contains('descripcion') && s.contains(':')) {
       final parts = s.split(':');
       if (parts.length > 1) {
-        // Assume the last part is the value (simplified) or join parts after first colon
         String val = parts.sublist(1).join(':').trim();
-        // Remove quotes if present
         if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1);
         if (val.startsWith("'") && val.endsWith("'")) val = val.substring(1, val.length - 1);
         return val;
@@ -586,7 +566,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   Widget _buildValidationRow(String citationKey, int index, dynamic item) {
     final String desc = _cleanDescription(item);
     final bool? currentVal = _itemValidations[citationKey]?[index];
-    // print("item => $item");
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -632,10 +611,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 }
                 _itemValidations[citationKey]![index] = true;
               });
-
-              // print("=> ${_rolUser?.id}");
-              // print("item => ${item}");
-              // set function to validate
             }
           ),
           const SizedBox(width: 8),
@@ -652,7 +627,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 }
                 _itemValidations[citationKey]![index] = false;
               });
-
             }
           ),
         ],
@@ -721,6 +695,4 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
       ),
     );
   }
-
-
 }
