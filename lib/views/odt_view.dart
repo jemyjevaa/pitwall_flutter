@@ -211,7 +211,7 @@ class ServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFF1A237E);
     // GL00188452 | GL00183018
-    print("service => $service");
+    print("service => ${service.parts}");
 
     String parseTime = service.time.toString();
 
@@ -312,7 +312,7 @@ class ServiceCard extends StatelessWidget {
               children: [
                 if (service.parts.isNotEmpty) ...[
                   Text(
-                    "REFACCIONES", 
+                    "REFACCIONES",
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey[500], letterSpacing: 1.0)
                   ),
                   const SizedBox(height: 10),

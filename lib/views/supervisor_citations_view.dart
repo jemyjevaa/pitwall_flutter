@@ -333,6 +333,21 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     bool anyRejected = false;
     bool allApproved = true;
 
+    bool isSupervisor = citation.status.toUpperCase() == "PENDIENTE" && _rolUser?.rol.toUpperCase() == "SUPERVISOR";
+    bool isTaller = citation.status.toUpperCase() == "EN ESPERA" && _rolUser?.rol.toUpperCase() == "TALLER";
+    print("_rolUser?.rol.toUpperCase() => ${_rolUser?.rol.toUpperCase()} | citation.status.toUpperCase() => ${citation.status.toUpperCase()} ");
+    print("taller => $isTaller | supervisor => $isSupervisor");
+
+
+
+    Color statusColor = switch (citation.status.toUpperCase()) {
+      "ACEPTADA" => Colors.green,
+      "CANCELADA" => Colors.red,
+      "EN ESPERA" => Colors.yellow,
+      "PENDIENTE" => Colors.blue,
+      _ => Colors.grey,
+    };
+
     if (itemList.isNotEmpty) {
       for (int i = 0; i < itemList.length; i++) {
         final val = _itemValidations[citationKey]?[i];
@@ -385,7 +400,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         children: [
                           const Icon(Icons.directions_bus_rounded, size: 14, color: Colors.white),
                           const SizedBox(width: 6),
-                          Text(citation.unitId,
+                          Text(citation.numberUnit,
                               style: const TextStyle(
                                   fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
                         ],
@@ -396,13 +411,13 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: anyRejected ? Colors.red.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                        color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: anyRejected ? Colors.red.withOpacity(0.3) : Colors.orange.withOpacity(0.3)),
+                        border: Border.all(color: statusColor),
                       ),
                       child: Text(
-                        itemList.isEmpty ? 'SIN FALLAS' : 'CON FALLAS',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: anyRejected ? Colors.red : Colors.orange),
+                        citation.status,
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold ),
                       ),
                     ),
                   ],
@@ -422,17 +437,13 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                   ],
                 ),
-                const SizedBox(height: 12),
-                // Description
-                Text(
-                  "report: ${citation.report}",
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "activities :${citation.activities}",
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
+                // const SizedBox(height: 12),
+                // // Description
+                // Text(
+                //   "report: ${citation.report}",
+                //   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                // ),
+
                 const SizedBox(height: 10),
                 // Operator
                 Row(
@@ -441,13 +452,32 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Operador ID: ${citation.operatorId}',
+                        'Operador: ${citation.nameOperator}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
                         overflow: TextOverflow.ellipsis,
-                      ),
+                      )
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.person_outline_rounded, size: 14, color: Colors.grey[400]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Supervisor: ${citation.nameSupervisor}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    ),
+                  ],
+                ),
+                // const SizedBox(height: 10),
+                // Text(
+                //   "Actividades:\n${citation.activities}",
+                //   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                // ),
               ],
             ),
           ),
@@ -474,7 +504,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               ),
             ),
             ...List.generate(itemList.length, (index) {
-              return _buildValidationRow(citationKey, index, itemList[index]);
+              return _buildValidationRow(citationKey, index, itemList[index], isSupervisor, isTaller);
             }),
             const SizedBox(height: 12),
           ],
@@ -504,7 +534,37 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
             ),
 
           // Action buttons
-          Padding(
+          !isSupervisor ? const SizedBox(height: 12)
+              :Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Opacity(
+                        opacity: allApproved ? 1.0 : 0.5,
+                        child: _buildActionButton(
+                          'APROBAR',
+                          Icons.check_circle_rounded,
+                          Colors.green,
+                          !allApproved ? () => _approve(ctx, citation) : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        'RECHAZAR',
+                        Icons.cancel_rounded,
+                        Colors.red,
+                        () => _showRejectionModal(ctx, citation),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+          !isTaller ? const SizedBox(height: 12)
+              :Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
@@ -525,7 +585,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     'RECHAZAR',
                     Icons.cancel_rounded,
                     Colors.red,
-                    () => _showRejectionModal(ctx, citation),
+                        () => _showRejectionModal(ctx, citation),
                   ),
                 ),
               ],
@@ -563,7 +623,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     return s;
   }
 
-  Widget _buildValidationRow(String citationKey, int index, dynamic item) {
+  Widget _buildValidationRow(String citationKey, int index, dynamic item, bool isSupervisor, bool isTaller) {
     final String desc = _cleanDescription(item);
     final bool? currentVal = _itemValidations[citationKey]?[index];
 
@@ -599,22 +659,27 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
           ),
           const SizedBox(width: 12),
           // SI Button
-          _buildToggleButton(
-            'SI', 
-            Icons.check_rounded, 
-            Colors.green, 
-            currentVal == true,
-            () {
-              setState(() {
-                if (!_itemValidations.containsKey(citationKey)) {
-                  _itemValidations[citationKey] = <int, bool>{};
-                }
-                _itemValidations[citationKey]![index] = true;
-              });
-            }
-          ),
+          isSupervisor?
+          (
+              _buildToggleButton(
+              'SI',
+              Icons.check_rounded,
+              Colors.green,
+              currentVal == true,
+              () {
+                setState(() {
+                  if (!_itemValidations.containsKey(citationKey)) {
+                    _itemValidations[citationKey] = <int, bool>{};
+                  }
+                  _itemValidations[citationKey]![index] = true;
+                });
+              }
+            )
+          )
+              :const SizedBox(),
           const SizedBox(width: 8),
           // NO Button
+          isSupervisor?
           _buildToggleButton(
             'NO', 
             Icons.close_rounded, 
@@ -628,7 +693,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 _itemValidations[citationKey]![index] = false;
               });
             }
-          ),
+          ):const SizedBox(),
         ],
       ),
     );

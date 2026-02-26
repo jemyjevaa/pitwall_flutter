@@ -61,9 +61,9 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     RequestServ response = RequestServ.instance;
-
+    print("ContextApp().rol?.toLowerCase() => ${ContextApp().rol?.toLowerCase()}");
     int sendRole = switch (ContextApp().rol?.toLowerCase()) {
-      "supervisor" => 3,
+      "supervisor" => 2,
       "taller" => 4,
       "administrador" => 3,
       "admin" => 3,
@@ -181,6 +181,7 @@ class UnitsViewModel extends ChangeNotifier {
           params = {
             "accion": "getUnidades",
             "sucursal": user.sucursal,
+            "idSupervisor": user.id,
             "page": page
           };
           if (RequestServ.modeDebug) {
