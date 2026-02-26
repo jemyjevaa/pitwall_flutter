@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:pitbus_app/services/context_app.dart';
+import '../models/appointment_model.dart';
 import '../models/history_model.dart';
 import '../services/RequestServ.dart';
 import '../services/ResponseServ.dart';
@@ -14,7 +15,7 @@ class UnitsViewModel extends ChangeNotifier {
   bool _isLoadingCitations = false;
   String? _errorMessage;
   List<ReportModel> _unitHistory = [];
-  List<Map<String, dynamic>> _pendingCitations = [];
+  List<AppointmentModel> _pendingCitations = [];
   bool _showOnlyCitations = false;
   final requestSer = RequestServ.instance;
 
@@ -27,7 +28,7 @@ class UnitsViewModel extends ChangeNotifier {
   
   bool get showOnlyCitations => _showOnlyCitations;
   List<ReportModel> get unitHistory => _unitHistory;
-  List<Map<String, dynamic>> get pendingCitations => _pendingCitations;
+  List<AppointmentModel> get pendingCitations => _pendingCitations;
   bool get isLoading => _isLoading;
   bool get isLoadingCitations => _isLoadingCitations;
   String? get errorMessage => _errorMessage;
@@ -59,8 +60,53 @@ class UnitsViewModel extends ChangeNotifier {
     _pendingCitations = [];
     notifyListeners();
 
+    RequestServ response = RequestServ.instance;
+
+    int sendRole = switch (ContextApp().rol?.toLowerCase()) {
+      "supervisor" => 3,
+      "taller" => 4,
+      "administrador" => 3,
+      "admin" => 3,
+      _ => 0,
+    };
+
+    if( sendRole == 0 ){
+      // SHOW MESSAGE ERROR
+      return;
+    }
+
     try {
 
+      Map<String, dynamic> sendParams = {
+        "action": "getCitasByRole",
+        "rol": sendRole.toString(),
+        "id_usuario": ContextApp().idUser.toString()
+      };
+
+      ResponseCite? responseCite = await response.handlingRequestParsed(
+        urlParam: "/api/appPitwall/citas",
+        method: "GET",
+        params: sendParams,
+        asJson: false,
+        fromJson: (json) {
+          print(" [ responseCite ] json => $json");
+          return ResponseCite.fromJson(json);
+        }
+      );
+
+      final res = responseCite!;
+
+      if( res.status != 200 ){
+        // SHOW MESSAGE ERROR
+        return;
+      }
+
+      responseCite.data.forEach((element) {
+        print("[ responseCite ] => $element");
+        _pendingCitations.add(element);
+      });
+
+      print("responseCite => $responseCite");
 
     } catch (e) {
       if (RequestServ.modeDebug) print("[ CiteValidate ] Error fetching all citations: $e");
@@ -357,7 +403,7 @@ class UnitsViewModel extends ChangeNotifier {
         "action": "validate",
         "Id_pre_odt": idPreOdt,
         "status": status,
-        "usuario": user.id,
+        "usuario": user.id.toString(),
         if (motivo != null) "motivo": motivo,
       };
 
