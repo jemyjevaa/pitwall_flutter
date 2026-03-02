@@ -58,9 +58,9 @@ class MyApp extends StatelessWidget {
           }
 
           // If operator hasn't filled manual data (assignedUnit is missing), send to collection view
-          if (user.rol == 'OPERADOR' && (user.assignedUnit == null || user.assignedUnit!.isEmpty)) {
-            return const OperatorDataView();
-          }
+          // if (user.rol == 'OPERADOR' && (user.assignedUnit == null || user.assignedUnit!.isEmpty)) {
+          //   return const OperatorDataView();
+          // }
           
           return const UnitsView();
         },
