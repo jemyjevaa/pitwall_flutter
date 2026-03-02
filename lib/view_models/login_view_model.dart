@@ -31,7 +31,7 @@ class LoginViewModel extends ChangeNotifier {
             "accion": "getSession"
           },
           fromJson: (json) {
-            // print("ResponseLogin.json => $json");
+            print("ResponseLogin.json => $json");
             return ResponseLogin.fromJson(json);
           }
       );

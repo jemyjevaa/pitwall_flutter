@@ -80,8 +80,13 @@ class UnitsViewModel extends ChangeNotifier {
       Map<String, dynamic> sendParams = {
         "action": "getCitasByRole",
         "rol": sendRole.toString(),
-        "id_usuario": ContextApp().idUser.toString()
+        "id_usuario": ContextApp().idUser.toString(),
+        // "status": 0
       };
+
+      if( sendRole == 2 ){
+        sendParams["status"] = 0;
+      }
 
       ResponseCite? responseCite = await response.handlingRequestParsed(
         urlParam: "/api/appPitwall/citas",
@@ -386,6 +391,7 @@ class UnitsViewModel extends ChangeNotifier {
       };
 
       final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
+      print("=> ${response}");
       ResponseServ.handleResponse(response);
       print("create => ${response.body}");
       _isLoading = false;

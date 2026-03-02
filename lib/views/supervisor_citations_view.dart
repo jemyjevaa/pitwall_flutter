@@ -116,7 +116,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Unidad ID: ${citation.unitId}',
+                'Unidad ID: ${citation.numberUnit}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 20),
@@ -511,27 +511,27 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
 
           // Rejection warning if any NO is selected
           if (anyRejected)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Hay fallas marcadas como NO. La cita debe ser rechazada.',
-                      style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Container(
+            //   margin: const EdgeInsets.symmetric(horizontal: 20),
+            //   padding: const EdgeInsets.all(12),
+            //   decoration: BoxDecoration(
+            //     color: Colors.red.withOpacity(0.05),
+            //     borderRadius: BorderRadius.circular(12),
+            //     border: Border.all(color: Colors.red.withOpacity(0.2)),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+            //       const SizedBox(width: 12),
+            //       const Expanded(
+            //         child: Text(
+            //           'Hay fallas marcadas como NO. La cita debe ser rechazada.',
+            //           style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600),
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
 
           // Action buttons
           !isSupervisor ? const SizedBox(height: 12)
