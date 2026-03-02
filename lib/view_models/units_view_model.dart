@@ -413,9 +413,10 @@ class UnitsViewModel extends ChangeNotifier {
         "usuario": user.id.toString(),
         if (motivo != null) "motivo": motivo,
       };
+      print("body => $body");
 
-      final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
-      ResponseServ.handleResponse(response);
+      // final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
+      // ResponseServ.handleResponse(response);
       return true;
     } catch (e) {
       return false;

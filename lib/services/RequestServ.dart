@@ -76,7 +76,9 @@ class RequestServ {
 
       // Agregar parámetros para GET en query string
       if (method.toUpperCase() == 'GET' && params != null && params.isNotEmpty) {
-        final uri = Uri.parse(fullUrl).replace(queryParameters: params);
+        final uri = Uri.parse(fullUrl).replace(
+          queryParameters: params.map((key, value) => MapEntry(key, value.toString())),
+        );
         response = await http.get(uri).timeout(const Duration(seconds: 10));
       } else {
         // Construir el body según asJson o form-url-encoded

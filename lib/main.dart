@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pitbus_app/services/context_app.dart';
+import 'package:pitbus_app/view_models/job_validate_view_model.dart';
 import 'package:provider/provider.dart';
 import 'views/login_view.dart';
 import 'views/units_view.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
         ChangeNotifierProvider(create: (_) => UnitsViewModel()),
         ChangeNotifierProvider(create: (_) => FormOperatorViewModel()),
+        ChangeNotifierProvider(create: (_) => JobValidateViewModel() ),
       ],
       child: const MyApp(),
     ),
