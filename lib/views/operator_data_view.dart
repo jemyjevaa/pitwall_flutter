@@ -120,6 +120,8 @@ class _OperatorDataViewState extends State<OperatorDataView> {
                               ContextApp().secondLastNameOperator = viewModel.apMaternoController.text;
                               ContextApp().unitAssOperator = viewModel.unidadController.text;
 
+                              print("ContextApp().fullNameOperator => ${ContextApp().fullNameOperator}");
+
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(builder: (_) => const UnitsView()),

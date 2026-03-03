@@ -85,7 +85,7 @@ class OdtService {
       family: json['familia']?.toString() ?? 'SERVICIOS',
       time: formatMinutes(rawTime),
       leadTime: formatDate(rawLeadTime),
-      parts: (json['refacciones']?.toString() ?? '').split(',').where((e) => e.isNotEmpty && e.trim() != '').toList(),
+      parts: (json['refacciones']?.toString() ?? '').split('.,').where((e) => e.isNotEmpty && e.trim() != '').toList(),
       mainMechanicName: json['mecanicoName']?.toString() ?? 'N/A',
       statusLabel: json['termino_servicio']?.toString() ?? 'SIN TERMINAR',
       isFinished: (json['termino_servicio']?.toString() ?? 'SIN TERMINAR') != 'SIN TERMINAR',

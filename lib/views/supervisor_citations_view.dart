@@ -5,6 +5,7 @@ import '../models/appointment_model.dart';
 import '../models/user_model.dart';
 import '../services/UserSession.dart';
 import '../services/context_app.dart';
+import '../view_models/job_validate_view_model.dart';
 import '../view_models/units_view_model.dart';
 
 class SupervisorCitationsView extends StatefulWidget {
@@ -18,7 +19,9 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   // Track validation per citation item: citationKey -> {itemIndex -> isValidated}
   // true = SI, false = NO
   final Map<String, Map<int, bool>> _itemValidations = {};
+
   UserModel? _rolUser;
+
 
   @override
   void initState() {
@@ -35,7 +38,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   }
 
   String _getCitationKey(AppointmentModel citation) {
-    return citation.id;
+    return citation.id!;
   }
 
   List<dynamic> _parseActivities(dynamic activities) {
@@ -59,11 +62,16 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   Future<void> _approve(BuildContext ctx, AppointmentModel citation) async {
     final user = ContextApp().user; //Provider.of<UserSession>(ctx, listen: false).user;
     if (user == null) return;
-    final idPreOdt = int.tryParse(citation.id);
+    final idPreOdt = int.tryParse(citation.id!);
     if (idPreOdt == null || idPreOdt == 0) return;
 
     final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
     final ok = await vm.updateCitaStatus(user, idPreOdt, 1);
+
+    final vmJob = Provider.of<JobValidateViewModel>(ctx, listen: false);
+    await vmJob.sendValidateJobs();
+
+
     if (!ctx.mounted) return;
 
     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
@@ -116,7 +124,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Unidad ID: ${citation.unitId}',
+                'Unidad ID: ${citation.numberUnit}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 20),
@@ -185,7 +193,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   Future<void> _reject(BuildContext ctx, AppointmentModel citation, String motivo) async {
     final user = Provider.of<UserSession>(ctx, listen: false).user;
     if (user == null) return;
-    final idPreOdt = int.tryParse(citation.id);
+    final idPreOdt = int.tryParse(citation.id!);
     if (idPreOdt == null || idPreOdt == 0) return;
 
     final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
@@ -203,6 +211,9 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
 
   @override
   Widget build(BuildContext context) {
+
+    final viewModelJob = Provider.of<JobValidateViewModel>(context, listen: false);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FE),
       appBar: AppBar(
@@ -291,7 +302,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                   itemCount: vm.pendingCitations.length,
                   itemBuilder: (context, index) {
-                    return _buildCitationCard(context, vm.pendingCitations[index]);
+                    return _buildCitationCard(context, vm.pendingCitations[index], viewModelJob);
                   },
                 ),
               ),
@@ -324,7 +335,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     );
   }
 
-  Widget _buildCitationCard(BuildContext ctx, AppointmentModel citation) {
+  Widget _buildCitationCard(BuildContext ctx, AppointmentModel citation, JobValidateViewModel viewModelJob) {
     final List<dynamic> itemList = _parseActivities(citation.activities);
     final String citationKey = _getCitationKey(citation);
     
@@ -333,17 +344,50 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     bool anyRejected = false;
     bool allApproved = true;
 
-    if (itemList.isNotEmpty) {
-      for (int i = 0; i < itemList.length; i++) {
-        final val = _itemValidations[citationKey]?[i];
-        if (val == null) {
-          allValidated = false;
-          allApproved = false;
-        } else if (val == false) {
-          anyRejected = true;
-          allApproved = false;
-        }
+    bool isSupervisor = citation.status?.toUpperCase() == "PENDIENTE" && _rolUser?.rol.toUpperCase() == "SUPERVISOR";
+    bool isTaller = citation.status?.toUpperCase() == "EN ESPERA" && _rolUser?.rol.toUpperCase() == "TALLER";
+    
+    // Call fetch inside a post frame callback to avoid "setState() or markNeedsBuild() called during build"
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isSupervisor || isTaller) {
+        viewModelJob.fetchGetJobByAppointment(int.parse(citationKey));
       }
+    });
+
+    Color statusColor = switch (citation.status?.toUpperCase()) {
+      "ACEPTADA" => Colors.green,
+      "CANCELADA" => Colors.red,
+      "EN ESPERA" => Colors.yellow,
+      "PENDIENTE" => Colors.blue,
+      _ => Colors.grey,
+    };
+
+    // if (itemList.isNotEmpty) {
+    //   for (int i = 0; i < itemList.length; i++) {
+    //     // final val = _itemValidations[citationKey]?[index]; // Use index from outer loop? No, this is builder logic.
+    //     // Wait, index is not defined here. Correcting logic.
+    //   }
+    // }
+    
+    // Re-calculating allValidated for UI feedback
+    if (_itemValidations.containsKey(citationKey)) {
+        final validations = _itemValidations[citationKey]!;
+        if (validations.length < itemList.length) {
+            allValidated = false;
+            allApproved = false;
+        } else {
+            validations.forEach((k, v) {
+              anyRejected = true;
+              allApproved = true;
+                // if (v == false) {
+                //     anyRejected = true;
+                //     allApproved = false;
+                // }
+            });
+        }
+    } else if (itemList.isNotEmpty) {
+        allValidated = false;
+        allApproved = false;
     }
 
     return Container(
@@ -385,7 +429,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         children: [
                           const Icon(Icons.directions_bus_rounded, size: 14, color: Colors.white),
                           const SizedBox(width: 6),
-                          Text(citation.unitId,
+                          Text(citation.numberUnit!,
                               style: const TextStyle(
                                   fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
                         ],
@@ -396,13 +440,13 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: anyRejected ? Colors.red.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                        color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: anyRejected ? Colors.red.withOpacity(0.3) : Colors.orange.withOpacity(0.3)),
+                        border: Border.all(color: statusColor),
                       ),
                       child: Text(
-                        itemList.isEmpty ? 'SIN FALLAS' : 'CON FALLAS',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: anyRejected ? Colors.red : Colors.orange),
+                        citation.status!,
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold ),
                       ),
                     ),
                   ],
@@ -418,21 +462,11 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     const Spacer(),
                     Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey[400]),
                     const SizedBox(width: 4),
-                    Text(citation.dateRequest ?? citation.dateCreate,
+                    Text(citation.dateRequest ?? citation.dateCreate!,
                         style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                   ],
                 ),
-                const SizedBox(height: 12),
-                // Description
-                Text(
-                  "report: ${citation.report}",
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "activities :${citation.activities}",
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
+
                 const SizedBox(height: 10),
                 // Operator
                 Row(
@@ -441,10 +475,24 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Operador ID: ${citation.operatorId}',
+                        'Operador: ${citation.nameOperator}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
                         overflow: TextOverflow.ellipsis,
-                      ),
+                      )
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.person_outline_rounded, size: 14, color: Colors.grey[400]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Supervisor: ${citation.nameSupervisor}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      )
                     ),
                   ],
                 ),
@@ -473,64 +521,78 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 ],
               ),
             ),
-            ...List.generate(itemList.length, (index) {
-              return _buildValidationRow(citationKey, index, itemList[index]);
-            }),
+            Consumer<JobValidateViewModel>(
+              builder: (context, vmJob, child) {
+                return Column(
+                  children: List.generate(vmJob.jobs.length, (index) {
+                    final item = vmJob.jobs[index];
+                    return _buildValidationRowValidate(
+                        item, index, citationKey, isSupervisor, isTaller, vmJob);
+                  }),
+                );
+              },
+            ),
             const SizedBox(height: 12),
           ],
 
-          // Rejection warning if any NO is selected
-          if (anyRejected)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Hay fallas marcadas como NO. La cita debe ser rechazada.',
-                      style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
           // Action buttons
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Opacity(
-                    opacity: allApproved ? 1.0 : 0.5,
-                    child: _buildActionButton(
-                      'APROBAR',
-                      Icons.check_circle_rounded,
-                      Colors.green,
-                      !allApproved ? () => _approve(ctx, citation) : null,
+          !isSupervisor ? const SizedBox(height: 12)
+              :Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Opacity(
+                        opacity: allApproved ? 1.0 : 0.5,
+                        child: _buildActionButton(
+                          'APROBAR',
+                          Icons.check_circle_rounded,
+                          Colors.green,
+                          allApproved ? () => _approve(ctx, citation) : null,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        'RECHAZAR',
+                        Icons.cancel_rounded,
+                        Colors.red,
+                        () => _showRejectionModal(ctx, citation),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionButton(
-                    'RECHAZAR',
-                    Icons.cancel_rounded,
-                    Colors.red,
-                    () => _showRejectionModal(ctx, citation),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+
+          // !isTaller ? const SizedBox(height: 12)
+          //     :Padding(
+          //   padding: const EdgeInsets.all(20),
+          //   child: Row(
+          //     children: [
+          //       Expanded(
+          //         child: Opacity(
+          //           opacity: allApproved ? 1.0 : 0.5,
+          //           child: _buildActionButton(
+          //             'APROBAR',
+          //             Icons.check_circle_rounded,
+          //             Colors.green,
+          //             allApproved ? () => _approve(ctx, citation) : null,
+          //           ),
+          //         ),
+          //       ),
+          //       const SizedBox(width: 12),
+          //       Expanded(
+          //         child: _buildActionButton(
+          //           'RECHAZAR',
+          //           Icons.cancel_rounded,
+          //           Colors.red,
+          //               () => _showRejectionModal(ctx, citation),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );
@@ -563,9 +625,16 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     return s;
   }
 
-  Widget _buildValidationRow(String citationKey, int index, dynamic item) {
-    final String desc = _cleanDescription(item);
-    final bool? currentVal = _itemValidations[citationKey]?[index];
+  Widget _buildValidationRowValidate(
+    JobValidateModel item, 
+    int index, 
+    String citationKey, 
+    bool isSupervisor, 
+    bool isTaller, 
+    JobValidateViewModel viewModelJob
+  ) {
+    print("=> ${item.status}");
+    final bool currentSelection = true;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -574,9 +643,9 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
         color: const Color(0xFFF8F9FE),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: currentVal == null 
-              ? Colors.transparent 
-              : (currentVal ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3)),
+          color: currentSelection
+              ? Colors.transparent
+              : (currentSelection ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3)),
         ),
       ),
       child: Row(
@@ -591,48 +660,132 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  desc,
+                  item.descripcion,
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          // SI Button
-          _buildToggleButton(
-            'SI', 
-            Icons.check_rounded, 
-            Colors.green, 
-            currentVal == true,
-            () {
-              setState(() {
-                if (!_itemValidations.containsKey(citationKey)) {
-                  _itemValidations[citationKey] = <int, bool>{};
-                }
-                _itemValidations[citationKey]![index] = true;
-              });
-            }
-          ),
-          const SizedBox(width: 8),
-          // NO Button
-          _buildToggleButton(
-            'NO', 
-            Icons.close_rounded, 
-            Colors.red, 
-            currentVal == false,
-            () {
-              setState(() {
-                if (!_itemValidations.containsKey(citationKey)) {
-                  _itemValidations[citationKey] = <int, bool>{};
-                }
-                _itemValidations[citationKey]![index] = false;
-              });
-            }
-          ),
+          
+          if (isSupervisor) ...[
+            _buildToggleButton(
+              'SI',
+              Icons.check_rounded,
+              Colors.green,
+              item.status == "Aceptada",
+              () {
+
+                print("idPreOdt: ${item.id} | status : 1 | id_usuario_valida: ${ContextApp().idUser}");
+
+                viewModelJob.updateJobStatus(item.id, "Aceptada");
+                setState(() {
+                  if (!_itemValidations.containsKey(citationKey)) {
+                    _itemValidations[citationKey] = <int, bool>{};
+                  }
+                  _itemValidations[citationKey]![index] = true;
+                });
+              }
+            ),
+            const SizedBox(width: 8),
+            _buildToggleButton(
+              'NO', 
+              Icons.close_rounded, 
+              Colors.red, 
+              item.status == "cacelada",
+              () {
+
+                print("idPreOdt: ${item.id} | status : 2 | id_usuario_valida: ${ContextApp().idUser}");
+                viewModelJob.updateJobStatus(item.id, "cacelada");
+                setState(() {
+                  if (!_itemValidations.containsKey(citationKey)) {
+                    _itemValidations[citationKey] = <int, bool>{};
+                  }
+                  _itemValidations[citationKey]![index] = false;
+                });
+              }
+            ),
+          ] else const SizedBox(),
         ],
       ),
     );
   }
+
+  // Widget _buildValidationRow(String citationKey, int index, dynamic item, bool isSupervisor, bool isTaller, JobValidateViewModel viewModelJob) {
+  //   final String desc = _cleanDescription(item);
+  //   final bool? currentVal = _itemValidations[citationKey]?[index];
+  //
+  //   return Container(
+  //     margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+  //     padding: const EdgeInsets.all(12),
+  //     decoration: BoxDecoration(
+  //       color: const Color(0xFFF8F9FE),
+  //       borderRadius: BorderRadius.circular(16),
+  //       border: Border.all(
+  //         color: currentVal == null
+  //             ? Colors.transparent
+  //             : (currentVal ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3)),
+  //       ),
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 'FALLA REPORTADA',
+  //                 style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.grey[500], letterSpacing: 0.5),
+  //               ),
+  //               const SizedBox(height: 2),
+  //               Text(
+  //                 desc,
+  //                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //         const SizedBox(width: 12),
+  //         // SI Button
+  //         isSupervisor?
+  //         (
+  //             _buildToggleButton(
+  //             'SI',
+  //             Icons.check_rounded,
+  //             Colors.green,
+  //             currentVal == true,
+  //             () {
+  //               setState(() {
+  //                 if (!_itemValidations.containsKey(citationKey)) {
+  //                   _itemValidations[citationKey] = <int, bool>{};
+  //                 }
+  //                 _itemValidations[citationKey]![index] = true;
+  //               });
+  //             }
+  //           )
+  //         )
+  //             :const SizedBox(),
+  //         const SizedBox(width: 8),
+  //         // NO Button
+  //         isSupervisor?
+  //         _buildToggleButton(
+  //           'NO',
+  //           Icons.close_rounded,
+  //           Colors.red,
+  //           currentVal == false,
+  //           () {
+  //             setState(() {
+  //               if (!_itemValidations.containsKey(citationKey)) {
+  //                 _itemValidations[citationKey] = <int, bool>{};
+  //               }
+  //               _itemValidations[citationKey]![index] = false;
+  //             });
+  //           }
+  //         ):const SizedBox(),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildToggleButton(String label, IconData icon, Color color, bool isSelected, VoidCallback onTap) {
     return InkWell(

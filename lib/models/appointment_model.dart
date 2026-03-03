@@ -17,32 +17,35 @@ class ResponseCite{
 }
 
 class AppointmentModel {
-  final String id;
-  final String unitId;
-  final String operatorId;
-  final String report;
+  final String? id;
+  final String? unitId;
+  final String? operatorId;
+  final String? report;
   final String? dateRequest;
-  final String dateCreate;
-  final String assignedTime;
-  final String urgency;
+  final String? dateCreate;
+  final String? assignedTime;
+  final String? urgency;
   final String? img1;
   final String? img2;
   final String? img3;
-  final String workshop;
-  final String nave;
-  final String mechanic;
+  final String? workshop;
+  final String? nave;
+  final String? mechanic;
   final String? note;
   final String? activities;
-  final String status;
-  final String active;
-  final String userCreated;
+  final String? status;
+  final String? active;
+  final String? userCreated;
   final String? userCancel;
   final String? odtFolio;
-  final String branch;
-  final String gpsValidated;
-  final String gpsTime;
-  final String urgencia;
-  final String subUrgencia;
+  final String? branch;
+  final String? gpsValidated;
+  final String? gpsTime;
+  final String? urgencia;
+  final String? subUrgencia;
+  final String? numberUnit;
+  final String? nameOperator;
+  final String? nameSupervisor;
 
   AppointmentModel({
     required this.id,
@@ -71,6 +74,9 @@ class AppointmentModel {
     required this.gpsTime,
     required this.urgencia,
     required this.subUrgencia,
+    required this.numberUnit,
+    required this.nameOperator,
+    required this.nameSupervisor,
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
@@ -108,6 +114,9 @@ class AppointmentModel {
       gpsTime: json['horaGPS']?.toString() ?? '',
       urgencia: json['urgencia']?.toString() ?? '',
       subUrgencia: json['sub_urgencia']?.toString() ?? '',
+      numberUnit: json["economico"] ?? "",
+      nameOperator: json["nombre_operador"] ?? "",
+      nameSupervisor: json["nombre_supervisor"]
     );
   }
 }

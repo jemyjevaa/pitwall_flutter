@@ -11,8 +11,7 @@ class LoginViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  RequestServ requestSer = RequestServ.instance;
-
+  RequestServ requestSer = .instance;
 
   Future<bool> login(BuildContext context, String usuario, String password, {bool persist = false}) async {
     _isLoading = true;
@@ -39,7 +38,7 @@ class LoginViewModel extends ChangeNotifier {
 
       if( responseLogin == null){
         if( RequestServ.modeDebug ){
-          print("[ ERROR ] responseLogin => ${responseLogin}");
+          print("[ ERROR ] responseLogin => $responseLogin");
         }
         _isLoading = validateLogin;
         return validateLogin;
@@ -74,6 +73,7 @@ class LoginViewModel extends ChangeNotifier {
 
         ContextApp().user = user;
         ContextApp().idUser = int.parse(user.id.toString());
+        print("ContextApp().idUser => ${ContextApp().idUser}");
         ContextApp().nameUser = user.idUsuario;
         ContextApp().rol = user.rol;
         if (context.mounted) {
@@ -103,5 +103,7 @@ class LoginViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+
   }
+
 }

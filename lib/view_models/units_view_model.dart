@@ -61,9 +61,9 @@ class UnitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     RequestServ response = RequestServ.instance;
-
+    print("ContextApp().rol?.toLowerCase() => ${ContextApp().rol?.toLowerCase()}");
     int sendRole = switch (ContextApp().rol?.toLowerCase()) {
-      "supervisor" => 3,
+      "supervisor" => 2,
       "taller" => 4,
       "administrador" => 3,
       "admin" => 3,
@@ -80,8 +80,16 @@ class UnitsViewModel extends ChangeNotifier {
       Map<String, dynamic> sendParams = {
         "action": "getCitasByRole",
         "rol": sendRole.toString(),
-        "id_usuario": ContextApp().idUser.toString()
+        "id_usuario": ContextApp().idUser.toString(),
+        // "status": 0
       };
+
+      if( sendRole == 2 ){
+        sendParams["status"] = 0;
+      }
+      if( sendRole == 4 ){
+        sendParams["status"] = 1;
+      }
 
       ResponseCite? responseCite = await response.handlingRequestParsed(
         urlParam: "/api/appPitwall/citas",
@@ -181,6 +189,7 @@ class UnitsViewModel extends ChangeNotifier {
           params = {
             "accion": "getUnidades",
             "sucursal": user.sucursal,
+            "idSupervisor": user.id,
             "page": page
           };
           if (RequestServ.modeDebug) {
@@ -385,6 +394,7 @@ class UnitsViewModel extends ChangeNotifier {
       };
 
       final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
+      print("=> ${response}");
       ResponseServ.handleResponse(response);
       print("create => ${response.body}");
       _isLoading = false;
@@ -401,14 +411,17 @@ class UnitsViewModel extends ChangeNotifier {
     try {
       final body = {
         "action": "validate",
-        "Id_pre_odt": idPreOdt,
+        "id_pre_odt": idPreOdt,
         "status": status,
         "usuario": user.id.toString(),
         if (motivo != null) "motivo": motivo,
       };
 
+      print("body => $body");
+
       final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
       ResponseServ.handleResponse(response);
+
       return true;
     } catch (e) {
       return false;

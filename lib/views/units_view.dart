@@ -265,7 +265,7 @@ class _UnitsViewState extends State<UnitsView> {
   }
 
   Widget _buildDrawer(BuildContext context, dynamic user) {
-    final textName = (isOperator ? ContextApp().fullNameOperator : user?.fullName) ?? "Cargando...";
+    final textName = isOperator ? "${ContextApp().fullNameOperator}" : user?.fullName;
     return Drawer(
       child: Column(
         children: [
