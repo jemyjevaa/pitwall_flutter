@@ -38,7 +38,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   }
 
   String _getCitationKey(AppointmentModel citation) {
-    return citation.id;
+    return citation.id!;
   }
 
   List<dynamic> _parseActivities(dynamic activities) {
@@ -62,11 +62,16 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   Future<void> _approve(BuildContext ctx, AppointmentModel citation) async {
     final user = ContextApp().user; //Provider.of<UserSession>(ctx, listen: false).user;
     if (user == null) return;
-    final idPreOdt = int.tryParse(citation.id);
+    final idPreOdt = int.tryParse(citation.id!);
     if (idPreOdt == null || idPreOdt == 0) return;
 
     final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
     final ok = await vm.updateCitaStatus(user, idPreOdt, 1);
+
+    final vmJob = Provider.of<JobValidateViewModel>(ctx, listen: false);
+    await vmJob.sendValidateJobs();
+
+
     if (!ctx.mounted) return;
 
     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
@@ -188,7 +193,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
   Future<void> _reject(BuildContext ctx, AppointmentModel citation, String motivo) async {
     final user = Provider.of<UserSession>(ctx, listen: false).user;
     if (user == null) return;
-    final idPreOdt = int.tryParse(citation.id);
+    final idPreOdt = int.tryParse(citation.id!);
     if (idPreOdt == null || idPreOdt == 0) return;
 
     final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
@@ -339,8 +344,8 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     bool anyRejected = false;
     bool allApproved = true;
 
-    bool isSupervisor = citation.status.toUpperCase() == "PENDIENTE" && _rolUser?.rol.toUpperCase() == "SUPERVISOR";
-    bool isTaller = citation.status.toUpperCase() == "EN ESPERA" && _rolUser?.rol.toUpperCase() == "TALLER";
+    bool isSupervisor = citation.status?.toUpperCase() == "PENDIENTE" && _rolUser?.rol.toUpperCase() == "SUPERVISOR";
+    bool isTaller = citation.status?.toUpperCase() == "EN ESPERA" && _rolUser?.rol.toUpperCase() == "TALLER";
     
     // Call fetch inside a post frame callback to avoid "setState() or markNeedsBuild() called during build"
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -349,7 +354,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
       }
     });
 
-    Color statusColor = switch (citation.status.toUpperCase()) {
+    Color statusColor = switch (citation.status?.toUpperCase()) {
       "ACEPTADA" => Colors.green,
       "CANCELADA" => Colors.red,
       "EN ESPERA" => Colors.yellow,
@@ -424,7 +429,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         children: [
                           const Icon(Icons.directions_bus_rounded, size: 14, color: Colors.white),
                           const SizedBox(width: 6),
-                          Text(citation.numberUnit,
+                          Text(citation.numberUnit!,
                               style: const TextStyle(
                                   fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
                         ],
@@ -440,7 +445,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         border: Border.all(color: statusColor),
                       ),
                       child: Text(
-                        citation.status,
+                        citation.status!,
                         style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold ),
                       ),
                     ),
@@ -457,7 +462,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                     const Spacer(),
                     Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey[400]),
                     const SizedBox(width: 4),
-                    Text(citation.dateRequest ?? citation.dateCreate,
+                    Text(citation.dateRequest ?? citation.dateCreate!,
                         style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                   ],
                 ),
@@ -560,34 +565,34 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                 ),
               ),
 
-          !isTaller ? const SizedBox(height: 12)
-              :Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Opacity(
-                    opacity: allApproved ? 1.0 : 0.5,
-                    child: _buildActionButton(
-                      'APROBAR',
-                      Icons.check_circle_rounded,
-                      Colors.green,
-                      allApproved ? () => _approve(ctx, citation) : null,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionButton(
-                    'RECHAZAR',
-                    Icons.cancel_rounded,
-                    Colors.red,
-                        () => _showRejectionModal(ctx, citation),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // !isTaller ? const SizedBox(height: 12)
+          //     :Padding(
+          //   padding: const EdgeInsets.all(20),
+          //   child: Row(
+          //     children: [
+          //       Expanded(
+          //         child: Opacity(
+          //           opacity: allApproved ? 1.0 : 0.5,
+          //           child: _buildActionButton(
+          //             'APROBAR',
+          //             Icons.check_circle_rounded,
+          //             Colors.green,
+          //             allApproved ? () => _approve(ctx, citation) : null,
+          //           ),
+          //         ),
+          //       ),
+          //       const SizedBox(width: 12),
+          //       Expanded(
+          //         child: _buildActionButton(
+          //           'RECHAZAR',
+          //           Icons.cancel_rounded,
+          //           Colors.red,
+          //               () => _showRejectionModal(ctx, citation),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );

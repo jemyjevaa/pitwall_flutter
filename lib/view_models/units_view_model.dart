@@ -87,6 +87,9 @@ class UnitsViewModel extends ChangeNotifier {
       if( sendRole == 2 ){
         sendParams["status"] = 0;
       }
+      if( sendRole == 4 ){
+        sendParams["status"] = 1;
+      }
 
       ResponseCite? responseCite = await response.handlingRequestParsed(
         urlParam: "/api/appPitwall/citas",
@@ -408,15 +411,17 @@ class UnitsViewModel extends ChangeNotifier {
     try {
       final body = {
         "action": "validate",
-        "Id_pre_odt": idPreOdt,
+        "id_pre_odt": idPreOdt,
         "status": status,
         "usuario": user.id.toString(),
         if (motivo != null) "motivo": motivo,
       };
+
       print("body => $body");
 
-      // final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
-      // ResponseServ.handleResponse(response);
+      final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
+      ResponseServ.handleResponse(response);
+
       return true;
     } catch (e) {
       return false;

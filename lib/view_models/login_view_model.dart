@@ -73,6 +73,7 @@ class LoginViewModel extends ChangeNotifier {
 
         ContextApp().user = user;
         ContextApp().idUser = int.parse(user.id.toString());
+        print("ContextApp().idUser => ${ContextApp().idUser}");
         ContextApp().nameUser = user.idUsuario;
         ContextApp().rol = user.rol;
         if (context.mounted) {

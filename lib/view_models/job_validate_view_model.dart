@@ -69,6 +69,48 @@ class JobValidateViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> sendValidateJobs() async {
+    //things.status
+
+    List<dynamic> params = [];
+    _jobs.forEach((things)
+    {
+      int status = switch( things.status ) {
+        "Aceptada" => 1,
+        _ => 2
+      };
+      params.add({
+        "id" : things.id,
+        "id_valida_usuario" : ContextApp().idUser,
+        "status" : "$status"
+      });
+      // print("[ sendValidateJobs ]=>{"
+      //   "id : ${things.id},"
+      //   "id_valida_usuario : ${ContextApp().idUser},"
+      //   "status : $status,"
+      //   "}");
+    }
+    );
+    try{
+
+      final responseJob = await serv.handlingRequestParsed(
+          urlParam: "/api/appPitwall/citas/",
+          method: "POST",
+          params: {
+            "action" : "qualify",
+            "fails": params.toList()
+          },
+          fromJson: (json) => json
+      );
+
+      print("responseJob => $responseJob");
+
+    }catch(e){
+      print("[ ERROR JobValidateViewModel ] sendValidateJobs => $e");
+    }
+  }
+
+
 }
 
 class JobValidateModel {
