@@ -19,6 +19,9 @@ class RequestServ {
       encodedBody = body.map((key, value) => MapEntry(key, value.toString()));
     }
 
+    print("[ POST ] FINAL URL: $url");
+    print("[ POST ] FINAL PARAM: $body");
+    print("[ POST ] AS JSON: $asJson");
     if (modeDebug) {
       print("[ POST ] FINAL URL: $url");
       print("[ POST ] FINAL PARAM: $body");

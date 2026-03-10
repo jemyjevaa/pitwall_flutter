@@ -17,7 +17,7 @@ class ContextApp {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
-  bool isDebugMode = true;
+  bool isDebugMode = false;
 
   // --- Manejo del Objeto UserModel ---
 

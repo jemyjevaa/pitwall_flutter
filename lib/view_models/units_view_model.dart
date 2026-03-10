@@ -384,15 +384,15 @@ class UnitsViewModel extends ChangeNotifier {
 
       final body = {
         "action": "create",
-        "unidad": unitId, 
+        "usuarioName": "${ContextApp().fullNameOperator} ${ContextApp().firstLastNameOperator} ${ContextApp().secondLastNameOperator}",
         "usuarioId": user.id,
-        "usuarioName": user.fullName,
-        "reporteFalla": combinedReport,
+        "unidad": unitId,
+        "reporteFalla": failureTypes, //combinedReport,
+        "descripcionFalla": reporteFalla,
         "fechaPedida": fechaPedida,
         "sucursal": user.sucursal,
-        "actividades": failureTypes.map((t) => {"descripcion": t}).toList(),
       };
-
+      print("params => ${body}");
       final response = await RequestServ.post('/api/appPitwall/citas/', body, asJson: true);
       print("=> ${response}");
       ResponseServ.handleResponse(response);
