@@ -65,20 +65,34 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     final idPreOdt = int.tryParse(citation.id!);
     if (idPreOdt == null || idPreOdt == 0) return;
 
-    final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
-    final ok = await vm.updateCitaStatus(user, idPreOdt, 1);
 
     final vmJob = Provider.of<JobValidateViewModel>(ctx, listen: false);
-    await vmJob.sendValidateJobs();
+    bool isSuccess = await vmJob.sendValidateJobs(idPreOdt);
+    print("isSuccess => $isSuccess");
+
+    if(isSuccess){
+      final vm = Provider.of<UnitsViewModel>(ctx, listen: false);
+      final ok = await vm.updateCitaStatus(user, idPreOdt, 1);
+
+      if (!ctx.mounted) return;
+
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text(ok ? '✅ Cita aprobada' : 'Error al aprobar'),
+        backgroundColor: ok ? Colors.green : Colors.red,
+      ));
+      if (ok) vm.fetchAllPendingCitations(user);
+
+    }else{
+      if (!ctx.mounted) return;
+
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text('Error al aprobar'),
+        backgroundColor: Colors.red,
+      ));
+    }
 
 
-    if (!ctx.mounted) return;
 
-    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-      content: Text(ok ? '✅ Cita aprobada' : 'Error al aprobar'),
-      backgroundColor: ok ? Colors.green : Colors.red,
-    ));
-    if (ok) vm.fetchAllPendingCitations(user);
   }
 
   void _showRejectionModal(BuildContext ctx, AppointmentModel citation) {
@@ -362,34 +376,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
       _ => Colors.grey,
     };
 
-    // if (itemList.isNotEmpty) {
-    //   for (int i = 0; i < itemList.length; i++) {
-    //     // final val = _itemValidations[citationKey]?[index]; // Use index from outer loop? No, this is builder logic.
-    //     // Wait, index is not defined here. Correcting logic.
-    //   }
-    // }
-    
-    // Re-calculating allValidated for UI feedback
-    if (_itemValidations.containsKey(citationKey)) {
-        final validations = _itemValidations[citationKey]!;
-        if (validations.length < itemList.length) {
-            allValidated = false;
-            allApproved = false;
-        } else {
-            validations.forEach((k, v) {
-              anyRejected = true;
-              allApproved = true;
-                // if (v == false) {
-                //     anyRejected = true;
-                //     allApproved = false;
-                // }
-            });
-        }
-    } else if (itemList.isNotEmpty) {
-        allValidated = false;
-        allApproved = false;
-    }
-
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -397,7 +383,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: anyRejected ? Colors.red.withOpacity(0.08) : Colors.orange.withOpacity(0.08),
+            color: Colors.orange.withOpacity(0.08),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -513,86 +499,65 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
                         fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF1A237E), letterSpacing: 1),
                   ),
                   const Spacer(),
-                  if (!allValidated)
-                    const Text(
-                      'Faltan validaciones',
-                      style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
-                    ),
                 ],
               ),
             ),
             Consumer<JobValidateViewModel>(
               builder: (context, vmJob, child) {
+                final jobs = vmJob.getJobsByAppointment(int.parse(citationKey));
+                
+                // Determinamos si todos están rechazados y si alguno falta validar
+                bool allRejected = jobs.isNotEmpty && jobs.every((j) => j.status == "cacelada");
+                bool anyApproved = jobs.any((j) => j.status == "Aceptada");
+                bool allValidated = jobs.isNotEmpty && jobs.every((j) => j.status == "Aceptada" || j.status == "cacelada");
+
                 return Column(
-                  children: List.generate(vmJob.jobs.length, (index) {
-                    final item = vmJob.jobs[index];
-                    return _buildValidationRowValidate(
-                        item, index, citationKey, isSupervisor, isTaller, vmJob);
-                  }),
+                  children: [
+                    ...List.generate(jobs.length, (index) {
+                      final item = jobs[index];
+                      return _buildValidationRowValidate(
+                          item, index, citationKey, isSupervisor, isTaller, vmJob);
+                    }),
+                    
+                    if (isSupervisor)
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          // Botón APROBAR: Solo habilitado si hay al menos uno aceptado Y todos están validados
+                          Expanded(
+                            child: Opacity(
+                              opacity: (anyApproved && allValidated) ? 1.0 : 0.5,
+                              child: _buildActionButton(
+                                'APROBAR',
+                                Icons.check_circle_rounded,
+                                Colors.green,
+                                (anyApproved && allValidated) ? () => _approve(ctx, citation) : null,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Botón RECHAZAR: Habilitado si todos están validados (incluso si todos son falsos)
+                          Expanded(
+                            child: Opacity(
+                              opacity: allValidated ? 1.0 : 0.5,
+                              child: _buildActionButton(
+                                'RECHAZAR',
+                                Icons.cancel_rounded,
+                                Colors.red,
+                                allValidated ? () => _showRejectionModal(ctx, citation) : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
             const SizedBox(height: 12),
           ],
-
-          // Action buttons
-          !isSupervisor ? const SizedBox(height: 12)
-              :Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Opacity(
-                        opacity: allApproved ? 1.0 : 0.5,
-                        child: _buildActionButton(
-                          'APROBAR',
-                          Icons.check_circle_rounded,
-                          Colors.green,
-                          allApproved ? () => _approve(ctx, citation) : null,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        'RECHAZAR',
-                        Icons.cancel_rounded,
-                        Colors.red,
-                        () => _showRejectionModal(ctx, citation),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-          // !isTaller ? const SizedBox(height: 12)
-          //     :Padding(
-          //   padding: const EdgeInsets.all(20),
-          //   child: Row(
-          //     children: [
-          //       Expanded(
-          //         child: Opacity(
-          //           opacity: allApproved ? 1.0 : 0.5,
-          //           child: _buildActionButton(
-          //             'APROBAR',
-          //             Icons.check_circle_rounded,
-          //             Colors.green,
-          //             allApproved ? () => _approve(ctx, citation) : null,
-          //           ),
-          //         ),
-          //       ),
-          //       const SizedBox(width: 12),
-          //       Expanded(
-          //         child: _buildActionButton(
-          //           'RECHAZAR',
-          //           Icons.cancel_rounded,
-          //           Colors.red,
-          //               () => _showRejectionModal(ctx, citation),
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
         ],
       ),
     );
@@ -633,8 +598,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
     bool isTaller, 
     JobValidateViewModel viewModelJob
   ) {
-    print("=> ${item.status}");
-    final bool currentSelection = true;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -643,9 +606,9 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
         color: const Color(0xFFF8F9FE),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: currentSelection
-              ? Colors.transparent
-              : (currentSelection ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3)),
+          color: item.status == "Aceptada" 
+              ? Colors.green.withOpacity(0.3) 
+              : (item.status == "cacelada" ? Colors.red.withOpacity(0.3) : Colors.transparent),
         ),
       ),
       child: Row(
@@ -675,16 +638,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               Colors.green,
               item.status == "Aceptada",
               () {
-
-                print("idPreOdt: ${item.id} | status : 1 | id_usuario_valida: ${ContextApp().idUser}");
-
-                viewModelJob.updateJobStatus(item.id, "Aceptada");
-                setState(() {
-                  if (!_itemValidations.containsKey(citationKey)) {
-                    _itemValidations[citationKey] = <int, bool>{};
-                  }
-                  _itemValidations[citationKey]![index] = true;
-                });
+                viewModelJob.updateJobStatus(int.parse(citationKey), item.id, "Aceptada");
               }
             ),
             const SizedBox(width: 8),
@@ -694,15 +648,7 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
               Colors.red, 
               item.status == "cacelada",
               () {
-
-                print("idPreOdt: ${item.id} | status : 2 | id_usuario_valida: ${ContextApp().idUser}");
-                viewModelJob.updateJobStatus(item.id, "cacelada");
-                setState(() {
-                  if (!_itemValidations.containsKey(citationKey)) {
-                    _itemValidations[citationKey] = <int, bool>{};
-                  }
-                  _itemValidations[citationKey]![index] = false;
-                });
+                viewModelJob.updateJobStatus(int.parse(citationKey), item.id, "cacelada");
               }
             ),
           ] else const SizedBox(),
@@ -710,82 +656,6 @@ class _SupervisorCitationsViewState extends State<SupervisorCitationsView> {
       ),
     );
   }
-
-  // Widget _buildValidationRow(String citationKey, int index, dynamic item, bool isSupervisor, bool isTaller, JobValidateViewModel viewModelJob) {
-  //   final String desc = _cleanDescription(item);
-  //   final bool? currentVal = _itemValidations[citationKey]?[index];
-  //
-  //   return Container(
-  //     margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-  //     padding: const EdgeInsets.all(12),
-  //     decoration: BoxDecoration(
-  //       color: const Color(0xFFF8F9FE),
-  //       borderRadius: BorderRadius.circular(16),
-  //       border: Border.all(
-  //         color: currentVal == null
-  //             ? Colors.transparent
-  //             : (currentVal ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3)),
-  //       ),
-  //     ),
-  //     child: Row(
-  //       children: [
-  //         Expanded(
-  //           child: Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               Text(
-  //                 'FALLA REPORTADA',
-  //                 style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.grey[500], letterSpacing: 0.5),
-  //               ),
-  //               const SizedBox(height: 2),
-  //               Text(
-  //                 desc,
-  //                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //         const SizedBox(width: 12),
-  //         // SI Button
-  //         isSupervisor?
-  //         (
-  //             _buildToggleButton(
-  //             'SI',
-  //             Icons.check_rounded,
-  //             Colors.green,
-  //             currentVal == true,
-  //             () {
-  //               setState(() {
-  //                 if (!_itemValidations.containsKey(citationKey)) {
-  //                   _itemValidations[citationKey] = <int, bool>{};
-  //                 }
-  //                 _itemValidations[citationKey]![index] = true;
-  //               });
-  //             }
-  //           )
-  //         )
-  //             :const SizedBox(),
-  //         const SizedBox(width: 8),
-  //         // NO Button
-  //         isSupervisor?
-  //         _buildToggleButton(
-  //           'NO',
-  //           Icons.close_rounded,
-  //           Colors.red,
-  //           currentVal == false,
-  //           () {
-  //             setState(() {
-  //               if (!_itemValidations.containsKey(citationKey)) {
-  //                 _itemValidations[citationKey] = <int, bool>{};
-  //               }
-  //               _itemValidations[citationKey]![index] = false;
-  //             });
-  //           }
-  //         ):const SizedBox(),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   Widget _buildToggleButton(String label, IconData icon, Color color, bool isSelected, VoidCallback onTap) {
     return InkWell(

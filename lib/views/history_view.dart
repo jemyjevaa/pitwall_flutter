@@ -160,24 +160,24 @@ class _HistoryViewState extends State<HistoryView> {
           ),
           
           // Role-based actions for Supervisors on pending items
-          Consumer<UserSession>(builder: (context, session, _) {
-            final user = session.user;
-            final bool isSupervisor = user != null && (user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMIN' || user.rol.toUpperCase() == 'ADMINISTRADOR');
-            
-            if (isSupervisor && isPending && idPreOdt != null && idPreOdt > 0) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Row(
-                  children: [
-                    Expanded(child: _buildActionButton("APROBAR", Icons.check_circle_rounded, Colors.green, () => _handleStatusUpdate(context, idPreOdt, 1))),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildActionButton("RECHAZAR", Icons.cancel_rounded, Colors.red, () => _showRejectionModal(context, idPreOdt))),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
+          // Consumer<UserSession>(builder: (context, session, _) {
+          //   final user = session.user;
+          //   final bool isSupervisor = user != null && (user.rol.toUpperCase() == 'SUPERVISOR' || user.rol.toUpperCase() == 'ADMIN' || user.rol.toUpperCase() == 'ADMINISTRADOR');
+          //
+          //   if (isSupervisor && isPending && idPreOdt != null && idPreOdt > 0) {
+          //     return Padding(
+          //       padding: const EdgeInsets.only(top: 20),
+          //       child: Row(
+          //         children: [
+          //           Expanded(child: _buildActionButton("APROBAR", Icons.check_circle_rounded, Colors.green, () => _handleStatusUpdate(context, idPreOdt, 1))),
+          //           const SizedBox(width: 12),
+          //           Expanded(child: _buildActionButton("RECHAZAR", Icons.cancel_rounded, Colors.red, () => _showRejectionModal(context, idPreOdt))),
+          //         ],
+          //       ),
+          //     );
+          //   }
+          //   return const SizedBox.shrink();
+          // }),
         ],
       ),
     );

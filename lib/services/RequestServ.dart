@@ -91,13 +91,13 @@ class RequestServ {
         if (params != null) {
           if (asJson) {
             body = jsonEncode(params);
-            headers = {'Content-Type': 'application/json'};
+            headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'PostmanRuntime/7.52.0'};
           } else {
             body = params.map((k, v) => MapEntry(k, v.toString()));
             headers = {'Content-Type': 'application/x-www-form-urlencoded'};
           }
         }
-
+        print("header sends => $headers");
         Uri uri = Uri.parse(fullUrl);
 
         switch (method.toUpperCase()) {
@@ -127,6 +127,7 @@ class RequestServ {
       }
 
       if (response.statusCode >= 200 && response.statusCode < 500) {
+        print("headre response => ${response.headers}");
         return response.body;
       } else {
         if (RequestServ.modeDebug){
